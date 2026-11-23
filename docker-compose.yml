@@ -1,0 +1,91 @@
+services:
+  # 1. PostgreSQL Relational Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: wanderstay_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: wanderstay
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis Distributed Cache & Mutex Lock
+  redis:
+    image: redis:7-alpine
+    container_name: wanderstay_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. NestJS Modular Backend API
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: wanderstay_api
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DATABASE_URL: "postgresql://postgres:password123@postgres:5432/wanderstay?schema=public"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: "wanderstay_production_jwt_secret_key_8921"
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:-rzp_test_placeholder}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:-mock_secret}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:-whsec_mock}"
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # 4. Next.js App Router Web Application
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: wanderstay_web
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      NEXT_PUBLIC_API_URL: "http://api:4000/api/v1"
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:-rzp_test_placeholder}"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+  # 5. Nginx Production Edge Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: wanderstay_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
