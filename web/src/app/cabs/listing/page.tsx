@@ -324,16 +324,11 @@ function CabListingContent() {
             })
           ) : (
             <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+              <Car className="h-10 w-10 text-slate-300 mx-auto mb-2" />
               <h3 className="text-base font-bold text-slate-900">No Cabs Available on this Route</h3>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                No active commercial fleet is currently registered for this corridor in the database.
+                We couldn&apos;t find available cabs for this corridor and date. Please try selecting a different date or another nearby pickup location.
               </p>
-              <Link
-                href="/partner"
-                className="mt-4 inline-block px-5 py-2 rounded-xl bg-[#C25E34] text-white text-xs font-bold hover:bg-[#A84F2A]"
-              >
-                Register as Cab Operator
-              </Link>
             </div>
           )}
         </div>

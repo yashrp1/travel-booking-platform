@@ -14,6 +14,17 @@ export class HotelsController {
     return this.hotelsService.searchDestinations(query || '');
   }
 
+  @Get('search')
+  @ApiOperation({ summary: 'Search hotels via query params' })
+  async searchHotelsGet(@Query() query: any) {
+    return this.hotelsService.searchHotels({
+      destination: query.destination || '',
+      checkInDate: query.checkInDate || '',
+      checkOutDate: query.checkOutDate || '',
+      maxPrice: query.maxPrice ? Number(query.maxPrice) : undefined,
+    });
+  }
+
   @Post('search')
   @ApiOperation({ summary: 'Search hotels with date range, guests, and filters' })
   async searchHotels(@Body() dto: HotelSearchDto) {

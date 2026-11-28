@@ -142,18 +142,11 @@ export default function OffersPage() {
           </div>
         ) : (
           <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
-            <Tag className="h-10 w-10 text-[#C25E34] mx-auto mb-2" />
-            <h3 className="text-base font-bold text-slate-900">No active promotions in database</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-4">
-              All mock coupons have been removed. Platform administrators can create discount promo codes in the Super Admin Console.
+            <Tag className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+            <h3 className="text-base font-bold text-slate-900">No Active Promotional Offers</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+              Check back soon for new seasonal holiday deals, hotel discounts, and cab cashbacks!
             </p>
-            <Link
-              href="/admin/dashboard"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#C25E34] text-white text-xs font-bold hover:bg-[#A84F2A]"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>Create Coupon in Admin Console</span>
-            </Link>
           </div>
         )}
       </main>

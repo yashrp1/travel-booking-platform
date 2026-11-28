@@ -37,6 +37,14 @@ export default function CabFleetShowcase() {
     };
   }, []);
 
+  if (!isLoading && cabs.length === 0) {
+    return null;
+  }
+
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10">
       {/* Section Header */}
@@ -80,20 +88,8 @@ export default function CabFleetShowcase() {
       </div>
 
       {/* Cab Cards Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className={`h-72 rounded-2xl animate-pulse ${
-                isDark ? 'bg-white/5 border border-white/10' : 'bg-stone-100 border border-stone-200'
-              }`}
-            />
-          ))}
-        </div>
-      ) : cabs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {cabs.map((cab) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {cabs.map((cab) => (
             <div
               key={cab.id}
               className={`group flex flex-col justify-between overflow-hidden rounded-2xl transition-all duration-300 ${
@@ -159,27 +155,7 @@ export default function CabFleetShowcase() {
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        <div
-          className={`flex flex-col items-center justify-center p-10 rounded-2xl border text-center ${
-            isDark ? 'bg-white/5 border-white/10 text-stone-300' : 'bg-stone-50 border-stone-200 text-stone-600'
-          }`}
-        >
-          <Car className="h-12 w-12 text-[#C25E34] mb-3" />
-          <h3 className="text-lg font-bold text-stone-900 dark:text-white">No fleet registered yet</h3>
-          <p className="text-sm max-w-md mt-1 mb-5 text-stone-500 dark:text-stone-400">
-            All mock cabs have been removed. Cab operators can register an account and add their commercial vehicles to the database.
-          </p>
-          <Link
-            href="/partner"
-            className="inline-flex items-center gap-2 rounded-xl bg-[#C25E34] hover:bg-[#A84F2A] px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors"
-          >
-            <PlusCircle className="h-4 w-4" />
-            <span>Register Fleet (Operator Portal)</span>
-          </Link>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

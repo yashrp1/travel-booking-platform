@@ -36,6 +36,14 @@ export default function FeaturedHotels() {
     };
   }, []);
 
+  if (!isLoading && hotels.length === 0) {
+    return null;
+  }
+
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
       {/* Section Header */}
@@ -78,21 +86,9 @@ export default function FeaturedHotels() {
         </Link>
       </div>
 
-      {/* Grid of Hotel Cards or Clean Empty State */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className={`h-72 rounded-2xl animate-pulse ${
-                isDark ? 'bg-white/5 border border-white/10' : 'bg-stone-100 border border-stone-200'
-              }`}
-            />
-          ))}
-        </div>
-      ) : hotels.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {hotels.map((hotel) => (
+      {/* Grid of Hotel Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {hotels.map((hotel) => (
             <div
               key={hotel.id}
               className={`group flex flex-col justify-between overflow-hidden rounded-2xl transition-all duration-300 ${
@@ -165,37 +161,7 @@ export default function FeaturedHotels() {
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        <div
-          className={`flex flex-col items-center justify-center p-10 rounded-2xl border text-center ${
-            isDark ? 'bg-white/5 border-white/10 text-stone-300' : 'bg-stone-50 border-stone-200 text-stone-600'
-          }`}
-        >
-          <Building2 className="h-12 w-12 text-[#C25E34] mb-3" />
-          <h3 className="text-lg font-bold text-stone-900 dark:text-white">No properties listed yet</h3>
-          <p className="text-sm max-w-md mt-1 mb-5 text-stone-500 dark:text-stone-400">
-            All mock data has been removed. You can now register as a partner to list your hotel, resort, or homestay directly into the database.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/partner"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#C25E34] hover:bg-[#A84F2A] px-5 py-2.5 text-sm font-semibold text-white shadow-xs transition-colors"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>List Your Property (Partner Portal)</span>
-            </Link>
-            <Link
-              href="/admin/dashboard"
-              className={`inline-flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors ${
-                isDark ? 'border-white/20 text-white hover:bg-white/10' : 'border-stone-300 text-stone-800 hover:bg-stone-100'
-              }`}
-            >
-              <span>Super Admin Console</span>
-            </Link>
-          </div>
-        </div>
-      )}
+      </div>
     </section>
   );
 }

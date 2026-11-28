@@ -116,10 +116,7 @@ function HotelDetailContent() {
           </p>
           <div className="mt-6 flex justify-center gap-4">
             <Link href="/hotels/listing" className="px-5 py-2.5 rounded-xl bg-[#C25E34] text-white text-sm font-bold">
-              Browse Hotels
-            </Link>
-            <Link href="/partner" className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-bold hover:bg-slate-100">
-              List Your Property
+              Browse Available Hotels
             </Link>
           </div>
         </div>

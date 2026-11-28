@@ -34,6 +34,14 @@ export default function OffersSection() {
     };
   }, []);
 
+  if (!isLoading && offers.length === 0) {
+    return null;
+  }
+
+  if (isLoading) {
+    return null;
+  }
+
   const filteredOffers = offers.filter(
     (off) => filter === 'ALL' || off.category === filter || (filter === 'BANK' && off.code.includes('BANK'))
   );
@@ -98,20 +106,8 @@ export default function OffersSection() {
       </div>
 
       {/* Offers Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className={`h-40 rounded-2xl animate-pulse ${
-                isDark ? 'bg-white/5 border border-white/10' : 'bg-stone-100 border border-stone-200'
-              }`}
-            />
-          ))}
-        </div>
-      ) : filteredOffers.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredOffers.map((offer) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredOffers.map((offer) => (
             <div
               key={offer.id || offer.code}
               className={`flex flex-col justify-between p-6 rounded-2xl border transition-all duration-300 ${
@@ -164,27 +160,7 @@ export default function OffersSection() {
               </div>
             </div>
           ))}
-        </div>
-      ) : (
-        <div
-          className={`flex flex-col items-center justify-center p-8 rounded-2xl border text-center ${
-            isDark ? 'bg-white/5 border-white/10 text-stone-300' : 'bg-stone-50 border-stone-200 text-stone-600'
-          }`}
-        >
-          <Tag className="h-10 w-10 text-[#C25E34] mb-2" />
-          <h3 className="text-base font-bold text-stone-900 dark:text-white">No active coupons in database</h3>
-          <p className="text-xs max-w-sm mt-1 mb-4 text-stone-500 dark:text-stone-400">
-            Create coupon codes directly in the Super Admin Console to offer discounts to customers.
-          </p>
-          <Link
-            href="/admin/dashboard"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#C25E34] hover:bg-[#A84F2A] px-4 py-2 text-xs font-semibold text-white shadow-xs transition-colors"
-          >
-            <PlusCircle className="h-3.5 w-3.5" />
-            <span>Create Coupons (Admin Console)</span>
-          </Link>
-        </div>
-      )}
+      </div>
     </section>
   );
 }
