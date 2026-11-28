@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { HotelsService } from '../hotels/hotels.service';
 import { CabsService } from '../cabs/cabs.service';
+import { BusesService } from '../buses/buses.service';
 import { BookingsService } from '../bookings/bookings.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -14,7 +15,7 @@ export interface PartnerAccount {
   email: string;
   phone: string;
   password?: string;
-  services: ('HOTELS' | 'CABS')[];
+  services: ('HOTELS' | 'CABS' | 'BUSES')[];
   createdAt: string;
 }
 
@@ -24,6 +25,7 @@ export class PartnerService {
     private readonly prisma: PrismaService,
     private readonly hotelsService: HotelsService,
     private readonly cabsService: CabsService,
+    private readonly busesService: BusesService,
     private readonly bookingsService: BookingsService,
   ) {}
 
@@ -156,6 +158,24 @@ export class PartnerService {
 
   async getVehicles(partnerId?: string) {
     return this.getPartnerVehicles(partnerId);
+  }
+
+  async createBus(payload: any, partnerId?: string) {
+    let operatorName = payload.operatorName;
+    if (partnerId) {
+      try {
+        const partner = await this.getPartnerById(partnerId);
+        if (partner && partner.businessName) operatorName = partner.businessName;
+      } catch {}
+    }
+    return this.busesService.createBus({
+      ...payload,
+      operatorName: operatorName || payload.operatorName || 'Partner Coach Fleet',
+    });
+  }
+
+  async getBuses(partnerId?: string) {
+    return this.busesService.getAllBuses();
   }
 
   async createProperty(dto: CreatePropertyDto, partnerId?: string) {

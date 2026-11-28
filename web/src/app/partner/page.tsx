@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   Hotel,
   Car,
+  Bus,
   TrendingUp,
   Plus,
   CheckCircle2,
@@ -40,16 +41,17 @@ export default function UnifiedPartnerPortal() {
     email: '',
     phone: '',
     password: '',
-    services: ['HOTELS'] as ('HOTELS' | 'CABS')[],
+    services: ['HOTELS'] as ('HOTELS' | 'CABS' | 'BUSES')[],
   });
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Portal view & tabs
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'HOTELS' | 'CABS' | 'BOOKINGS' | 'CALENDAR'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'HOTELS' | 'CABS' | 'BUSES' | 'BOOKINGS' | 'CALENDAR'>('OVERVIEW');
   const [overview, setOverview] = useState<any>(null);
   const [properties, setProperties] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [buses, setBuses] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -60,6 +62,7 @@ export default function UnifiedPartnerPortal() {
   // Modals
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [isBusModalOpen, setIsBusModalOpen] = useState(false);
   const [isServicesModalOpen, setIsServicesModalOpen] = useState(false);
 
   // Hotel Listing Form
@@ -91,6 +94,23 @@ export default function UnifiedPartnerPortal() {
     imageUrl: '',
   });
 
+  // Bus Listing Form
+  const [busForm, setBusForm] = useState({
+    operatorName: '',
+    busType: 'BharatBenz AC Sleeper (2+1)',
+    fromCity: '',
+    toCity: '',
+    departureTime: '08:30 PM',
+    arrivalTime: '07:30 AM',
+    duration: '11h 00m',
+    fare: 1250,
+    totalSeats: 36,
+    registrationNumber: '',
+    amenities: 'Live GPS Tracking, Clean Blankets, USB Charging, Free High-Speed WiFi',
+    boardingPoint: '',
+    droppingPoint: '',
+  });
+
   // Rate Editing
   const [editingPropId, setEditingPropId] = useState<string | null>(null);
   const [editBasePrice, setEditBasePrice] = useState<number>(0);
@@ -113,16 +133,18 @@ export default function UnifiedPartnerPortal() {
     if (!currentPartner) return;
     setLoading(true);
     try {
-      const [ov, props, vehs, bks] = await Promise.all([
+      const [ov, props, vehs, busList, bks] = await Promise.all([
         apiClient.getPartnerOverview(currentPartner.id),
         apiClient.getPartnerProperties(currentPartner.id),
         apiClient.getPartnerVehicles(currentPartner.id),
+        apiClient.getPartnerBuses(currentPartner.id),
         apiClient.getPartnerBookings(currentPartner.id),
       ]);
 
       if (ov) setOverview(ov);
       if (props) setProperties(props);
       if (vehs) setVehicles(vehs);
+      if (busList) setBuses(busList);
       if (bks) setBookings(bks);
     } catch (err) {
       console.error('Failed to load partner dashboard data:', err);
@@ -188,10 +210,10 @@ export default function UnifiedPartnerPortal() {
     setPartner(null);
   };
 
-  const handleToggleService = async (service: 'HOTELS' | 'CABS') => {
+  const handleToggleService = async (service: 'HOTELS' | 'CABS' | 'BUSES') => {
     if (!partner) return;
-    const currentServices: ('HOTELS' | 'CABS')[] = [...partner.services];
-    let updatedServices: ('HOTELS' | 'CABS')[];
+    const currentServices: ('HOTELS' | 'CABS' | 'BUSES')[] = [...partner.services];
+    let updatedServices: ('HOTELS' | 'CABS' | 'BUSES')[];
 
     if (currentServices.includes(service)) {
       if (currentServices.length === 1) {
@@ -264,6 +286,36 @@ export default function UnifiedPartnerPortal() {
       await loadPartnerData();
     } catch (err: any) {
       alert('Error adding vehicle: ' + err.message);
+    }
+  };
+
+  const handleAddBus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        operatorName: busForm.operatorName || partner.businessName,
+        busType: busForm.busType,
+        fromCity: busForm.fromCity,
+        toCity: busForm.toCity,
+        departureTime: busForm.departureTime,
+        arrivalTime: busForm.arrivalTime,
+        duration: busForm.duration,
+        fare: Number(busForm.fare),
+        totalSeats: Number(busForm.totalSeats),
+        registrationNumber: busForm.registrationNumber,
+        amenities: busForm.amenities ? busForm.amenities.split(',').map((a) => a.trim()).filter(Boolean) : [],
+        boardingPoints: busForm.boardingPoint ? [busForm.boardingPoint] : [`${busForm.fromCity} Main Stand`],
+        droppingPoints: busForm.droppingPoint ? [busForm.droppingPoint] : [`${busForm.toCity} Bus Depot`],
+        operatorId: partner.id,
+      };
+
+      await apiClient.createPartnerBus(payload, partner.id);
+      setIsBusModalOpen(false);
+      setFeedback('Bus route registered successfully! Coach is now live for guest seat reservations.');
+      setTimeout(() => setFeedback(null), 6000);
+      await loadPartnerData();
+    } catch (err: any) {
+      alert('Error listing bus route: ' + err.message);
     }
   };
 
@@ -485,11 +537,11 @@ export default function UnifiedPartnerPortal() {
                     Choose one or both. Your partner dashboard tools will automatically adapt to your selection.
                   </p>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label
-                      className={`p-4 rounded-2xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                      className={`p-3.5 rounded-2xl border-2 flex items-start gap-2.5 cursor-pointer transition-all ${
                         regData.services.includes('HOTELS')
-                          ? 'border-[#C25E34] bg-[#C25E34] text-[#18181B]/5'
+                          ? 'border-[#C25E34] bg-stone-50'
                           : 'border-[#94A3B8]/40 bg-white'
                       }`}
                     >
@@ -509,16 +561,16 @@ export default function UnifiedPartnerPortal() {
                           <Hotel className="h-4 w-4 text-[#C25E34]" />
                           <span>Accommodations</span>
                         </strong>
-                        <p className="text-[11px] text-gray-500 mt-0.5">
-                          Hotels, Resorts, Homestays &amp; Luxury Villas
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          Hotels, Resorts &amp; Homestays
                         </p>
                       </div>
                     </label>
 
                     <label
-                      className={`p-4 rounded-2xl border-2 flex items-start gap-3 cursor-pointer transition-all ${
+                      className={`p-3.5 rounded-2xl border-2 flex items-start gap-2.5 cursor-pointer transition-all ${
                         regData.services.includes('CABS')
-                          ? 'border-[#C25E34] bg-[#C25E34] text-[#18181B]/5'
+                          ? 'border-[#C25E34] bg-stone-50'
                           : 'border-[#94A3B8]/40 bg-white'
                       }`}
                     >
@@ -536,10 +588,39 @@ export default function UnifiedPartnerPortal() {
                       <div>
                         <strong className="block text-xs text-[#0F172A] font-bold flex items-center gap-1.5">
                           <Car className="h-4 w-4 text-amber-500" />
-                          <span>Cab &amp; Chauffeur Fleet</span>
+                          <span>Cab Fleet</span>
                         </strong>
-                        <p className="text-[11px] text-gray-500 mt-0.5">
-                          Commercial Cabs, Airport Transfers &amp; Outstation
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          Commercial Cabs &amp; Chauffeurs
+                        </p>
+                      </div>
+                    </label>
+
+                    <label
+                      className={`p-3.5 rounded-2xl border-2 flex items-start gap-2.5 cursor-pointer transition-all ${
+                        regData.services.includes('BUSES')
+                          ? 'border-[#C25E34] bg-stone-50'
+                          : 'border-[#94A3B8]/40 bg-white'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={regData.services.includes('BUSES')}
+                        onChange={(e) => {
+                          const updated = e.target.checked
+                            ? [...regData.services, 'BUSES' as const]
+                            : regData.services.filter((s) => s !== 'BUSES');
+                          setRegData({ ...regData, services: updated });
+                        }}
+                        className="mt-1 h-4 w-4 text-[#C25E34] rounded focus:ring-[#C25E34]"
+                      />
+                      <div>
+                        <strong className="block text-xs text-[#0F172A] font-bold flex items-center gap-1.5">
+                          <Bus className="h-4 w-4 text-emerald-600" />
+                          <span>Bus &amp; Coach</span>
+                        </strong>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          Intercity Sleepers &amp; Volvos
                         </p>
                       </div>
                     </label>
@@ -568,8 +649,9 @@ export default function UnifiedPartnerPortal() {
   }
 
   // 2. AUTHENTICATED: DYNAMIC UNIFIED PARTNER DASHBOARD
-  const hasHotels = partner.services?.includes('HOTELS');
-  const hasCabs = partner.services?.includes('CABS');
+  const hasHotels = partner.services?.includes('HOTELS') ?? true;
+  const hasCabs = partner.services?.includes('CABS') ?? false;
+  const hasBuses = partner.services?.includes('BUSES') ?? false;
   const hasBoth = hasHotels && hasCabs;
 
   return (
@@ -678,7 +760,7 @@ export default function UnifiedPartnerPortal() {
                 <button
                   onClick={() => setActiveTab('CABS')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === 'CABS' ? 'bg-[#C25E34] text-[#18181B] text-white' : 'text-[#94A3B8] hover:text-white'
+                    activeTab === 'CABS' ? 'bg-[#C25E34] text-white' : 'text-[#94A3B8] hover:text-white'
                   }`}
                 >
                   <Car className="h-3.5 w-3.5" />
@@ -686,15 +768,28 @@ export default function UnifiedPartnerPortal() {
                 </button>
               )}
 
+              {/* Buses Tab (Conditional on Partner Having Buses) */}
+              {hasBuses && (
+                <button
+                  onClick={() => setActiveTab('BUSES')}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === 'BUSES' ? 'bg-[#C25E34] text-white' : 'text-[#94A3B8] hover:text-white'
+                  }`}
+                >
+                  <Bus className="h-3.5 w-3.5" />
+                  <span>Buses &amp; Routes ({buses.length})</span>
+                </button>
+              )}
+
               {/* Unified Bookings Ledger */}
               <button
                 onClick={() => setActiveTab('BOOKINGS')}
                 className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'BOOKINGS' ? 'bg-[#C25E34] text-[#18181B] text-white' : 'text-[#94A3B8] hover:text-white'
+                  activeTab === 'BOOKINGS' ? 'bg-[#C25E34] text-white' : 'text-[#94A3B8] hover:text-white'
                 }`}
               >
                 <Clock className="h-3.5 w-3.5" />
-                <span>Bookings &amp; Trips Ledger ({bookings.length})</span>
+                <span>Bookings Ledger ({bookings.length})</span>
               </button>
 
               {/* IngoMMT Parity: 90-Day Room Availability & Dynamic Rate Calendar */}
@@ -702,7 +797,7 @@ export default function UnifiedPartnerPortal() {
                 <button
                   onClick={() => setActiveTab('CALENDAR')}
                   className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    activeTab === 'CALENDAR' ? 'bg-[#C25E34] text-[#18181B] text-white' : 'text-[#94A3B8] hover:text-white'
+                    activeTab === 'CALENDAR' ? 'bg-[#C25E34] text-white' : 'text-[#94A3B8] hover:text-white'
                   }`}
                 >
                   <Calendar className="h-3.5 w-3.5" />
@@ -730,6 +825,16 @@ export default function UnifiedPartnerPortal() {
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Add Cab</span>
+                </button>
+              )}
+
+              {hasBuses && (
+                <button
+                  onClick={() => setIsBusModalOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white rounded-lg shadow-sm flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Bus Route</span>
                 </button>
               )}
             </div>
@@ -1082,6 +1187,90 @@ export default function UnifiedPartnerPortal() {
           </div>
         )}
 
+        {/* TAB 3: BUS ROUTES & FLEET (Conditional on Partner Having Buses) */}
+        {activeTab === 'BUSES' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold font-sans font-black text-[#0F172A]">Intercity Bus Fleet &amp; Route Schedules</h2>
+                <p className="text-xs text-gray-500">Manage coach inventory, schedule departure slots, and live ticket fares.</p>
+              </div>
+              <button
+                onClick={() => setIsBusModalOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer self-start sm:self-auto transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Bus Route</span>
+              </button>
+            </div>
+
+            {buses.length === 0 ? (
+              <div className="rounded-3xl bg-white border border-[#94A3B8]/40 p-12 text-center space-y-3">
+                <div className="h-14 w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                  <Bus className="h-7 w-7" />
+                </div>
+                <h3 className="text-base font-bold text-[#0F172A]">No Bus Routes in Fleet Yet</h3>
+                <p className="text-xs text-gray-500 max-w-md mx-auto">
+                  Add intercity coach departures between corridors like Delhi ⇄ Manali, Mumbai ⇄ Goa, or Bangalore ⇄ Hyderabad to receive passenger reservations.
+                </p>
+                <button
+                  onClick={() => setIsBusModalOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-md cursor-pointer transition-colors"
+                >
+                  + Add First Bus Route
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {buses.map((b) => (
+                  <div
+                    key={b.id}
+                    className="rounded-3xl bg-white border border-[#94A3B8]/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+                  >
+                    <div className="p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-[#0F172A] bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          {b.registrationNumber || 'BUS-EXP-01'}
+                        </span>
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-100/60 px-2 py-0.5 rounded">
+                          ₹{b.fare} / seat
+                        </span>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 text-base font-black text-[#0F172A]">
+                          <span>{b.fromCity}</span>
+                          <span className="text-emerald-600">➔</span>
+                          <span>{b.toCity}</span>
+                        </div>
+                        <p className="text-xs font-semibold text-gray-500 mt-0.5">{b.busType}</p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 p-3 bg-gray-50 rounded-2xl text-xs">
+                        <div>
+                          <span className="text-[10px] text-gray-400 block uppercase font-bold">Departure</span>
+                          <strong className="text-[#0F172A]">{b.departureTime}</strong>
+                          <span className="text-[10px] text-gray-500 block truncate">{Array.isArray(b.boardingPoints) ? b.boardingPoints[0] : b.boardingPoints || 'Boarding Point'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-gray-400 block uppercase font-bold">Arrival</span>
+                          <strong className="text-[#0F172A]">{b.arrivalTime}</strong>
+                          <span className="text-[10px] text-gray-500 block truncate">{Array.isArray(b.droppingPoints) ? b.droppingPoints[0] : b.droppingPoints || 'Dropping Point'}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-[#94A3B8]/20 flex items-center justify-between text-xs">
+                        <span className="text-gray-500">Duration: <strong>{b.duration}</strong></span>
+                        <span className="font-bold text-gray-700">{b.totalSeats || 36} Berths Total</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* TAB 4: UNIFIED BOOKINGS LEDGER */}
         {activeTab === 'BOOKINGS' && (
           <div className="rounded-3xl bg-white border border-[#94A3B8]/40 overflow-hidden shadow-sm">
@@ -1382,7 +1571,7 @@ export default function UnifiedPartnerPortal() {
 
               <label
                 className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${
-                  hasCabs ? 'border-[#C25E34] bg-[#C25E34] text-[#18181B]/5' : 'border-[#94A3B8]/40'
+                  hasCabs ? 'border-[#C25E34] bg-[#C25E34]/5' : 'border-[#94A3B8]/40'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -1398,6 +1587,28 @@ export default function UnifiedPartnerPortal() {
                   type="checkbox"
                   checked={hasCabs}
                   onChange={() => handleToggleService('CABS')}
+                  className="h-5 w-5 text-[#C25E34] rounded focus:ring-[#C25E34]"
+                />
+              </label>
+
+              <label
+                className={`p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer transition-all ${
+                  hasBuses ? 'border-[#C25E34] bg-[#C25E34]/5' : 'border-[#94A3B8]/40'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+                    <Bus className="h-5 w-5 text-emerald-700" />
+                  </div>
+                  <div>
+                    <strong className="block text-sm text-[#0F172A] font-bold">Bus Fleet &amp; Intercity Routes</strong>
+                    <span className="text-[11px] text-gray-500">Luxury Sleeper &amp; Seater Express Coaches</span>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={hasBuses}
+                  onChange={() => handleToggleService('BUSES')}
                   className="h-5 w-5 text-[#C25E34] rounded focus:ring-[#C25E34]"
                 />
               </label>
@@ -1681,6 +1892,196 @@ export default function UnifiedPartnerPortal() {
                   className="bg-amber-600 hover:bg-amber-700 px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-md cursor-pointer transition-colors"
                 >
                   Register Cab to Fleet
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD BUS ROUTE MODAL */}
+      {isBusModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-[#94A3B8]/40 overflow-hidden my-8">
+            <div className="bg-[#0F172A] p-6 text-white flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black font-sans font-black">Register Intercity Bus Route</h3>
+                <p className="text-xs text-[#94A3B8]">Coach inventory, departure slots &amp; ticket pricing</p>
+              </div>
+              <button
+                onClick={() => setIsBusModalOpen(false)}
+                className="h-8 w-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddBus} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Coach Type *</label>
+                  <select
+                    value={busForm.busType}
+                    onChange={(e) => setBusForm({ ...busForm, busType: e.target.value })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold focus:ring-2 focus:ring-emerald-600 outline-none"
+                  >
+                    <option value="BharatBenz AC Sleeper (2+1)">BharatBenz AC Sleeper (2+1)</option>
+                    <option value="Volvo 9600 AC Multi-Axle Sleeper">Volvo 9600 AC Multi-Axle Sleeper</option>
+                    <option value="Scania Multi-Axle AC Semi-Sleeper">Scania Multi-Axle AC Semi-Sleeper</option>
+                    <option value="Mercedes-Benz SHD AC Glider">Mercedes-Benz SHD AC Glider</option>
+                    <option value="Tata Ultra Non-AC Seater (2+2)">Tata Ultra Non-AC Seater (2+2)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Coach Registration No. *</label>
+                  <input
+                    type="text"
+                    required
+                    value={busForm.registrationNumber}
+                    onChange={(e) => setBusForm({ ...busForm, registrationNumber: e.target.value })}
+                    placeholder="e.g. DL 01 AB 8812"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">From City (Origin) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={busForm.fromCity}
+                    onChange={(e) => setBusForm({ ...busForm, fromCity: e.target.value })}
+                    placeholder="e.g. New Delhi"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">To City (Destination) *</label>
+                  <input
+                    type="text"
+                    required
+                    value={busForm.toCity}
+                    onChange={(e) => setBusForm({ ...busForm, toCity: e.target.value })}
+                    placeholder="e.g. Manali"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Departure Time *</label>
+                  <input
+                    type="text"
+                    required
+                    value={busForm.departureTime}
+                    onChange={(e) => setBusForm({ ...busForm, departureTime: e.target.value })}
+                    placeholder="e.g. 08:30 PM"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Arrival Time *</label>
+                  <input
+                    type="text"
+                    required
+                    value={busForm.arrivalTime}
+                    onChange={(e) => setBusForm({ ...busForm, arrivalTime: e.target.value })}
+                    placeholder="e.g. 07:30 AM"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Duration *</label>
+                  <input
+                    type="text"
+                    required
+                    value={busForm.duration}
+                    onChange={(e) => setBusForm({ ...busForm, duration: e.target.value })}
+                    placeholder="e.g. 11h 00m"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Fare per Berth (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    value={busForm.fare}
+                    onChange={(e) => setBusForm({ ...busForm, fare: Number(e.target.value) })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Total Berth Capacity *</label>
+                  <input
+                    type="number"
+                    required
+                    value={busForm.totalSeats}
+                    onChange={(e) => setBusForm({ ...busForm, totalSeats: Number(e.target.value) })}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Boarding Landmark / Stand</label>
+                  <input
+                    type="text"
+                    value={busForm.boardingPoint}
+                    onChange={(e) => setBusForm({ ...busForm, boardingPoint: e.target.value })}
+                    placeholder="e.g. Kashmere Gate ISBT Counter 12"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-[#0F172A] mb-1">Dropping Landmark / Stand</label>
+                  <input
+                    type="text"
+                    value={busForm.droppingPoint}
+                    onChange={(e) => setBusForm({ ...busForm, droppingPoint: e.target.value })}
+                    placeholder="e.g. Manali Private Bus Parking"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-[#0F172A] mb-1">Amenities Included</label>
+                <input
+                  type="text"
+                  value={busForm.amenities}
+                  onChange={(e) => setBusForm({ ...busForm, amenities: e.target.value })}
+                  placeholder="Live GPS Tracking, Blankets, USB Charging, Free WiFi"
+                  className="w-full px-3 py-2.5 rounded-xl border border-[#94A3B8]/60 text-xs font-semibold"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBusModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-[#94A3B8] text-xs font-bold text-[#0F172A] hover:bg-[#F4F6F8]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="bg-emerald-600 hover:bg-emerald-700 px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-md cursor-pointer transition-colors"
+                >
+                  Publish Bus Route
                 </button>
               </div>
             </form>

@@ -103,6 +103,30 @@ export class PartnerController {
     };
   }
 
+  // --- BUS ROUTES & INTERCITY COACHES ---
+  @Post('buses')
+  async createBus(
+    @Body() payload: any,
+    @Query('partnerId') partnerId?: string,
+  ) {
+    const bus = await this.partnerService.createBus(payload, partnerId);
+    return {
+      success: true,
+      data: bus,
+      message: 'Bus departure route listed successfully and live for guest reservations.',
+    };
+  }
+
+  @Get('buses')
+  async getBuses(@Query('partnerId') partnerId?: string) {
+    const buses = await this.partnerService.getBuses(partnerId);
+    return {
+      success: true,
+      data: buses,
+      count: buses.length,
+    };
+  }
+
   // --- BOOKINGS LEDGER ---
   @Get('bookings')
   async getPartnerBookings(@Query('partnerId') partnerId?: string) {

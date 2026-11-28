@@ -150,7 +150,7 @@ function HotelDetailContent() {
 
   const handleBookNow = (targetRoomId?: string) => {
     const rId = targetRoomId || selectedRoom.id;
-    const targetRoom = hotel.rooms.find((r: any) => r.id === rId) || selectedRoom;
+    const targetRoom = hotelRooms.find((r: any) => r.id === rId) || selectedRoom;
     const plan = selectedMealPlans[rId] || 'BREAKFAST';
     const extra = plan === 'BREAKFAST' ? 1200 : plan === 'ALL_MEALS' ? 2800 : 0;
     const finalPrice = targetRoom.price + extra;
@@ -192,12 +192,12 @@ function HotelDetailContent() {
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="flex items-center text-amber-400">
-                  {Array.from({ length: hotel.starRating }).map((_, i) => (
+                  {Array.from({ length: Number(hotel.starRating) || 4 }).map((_, i) => (
                     <Star key={i} className="h-4 w-4 fill-current" />
                   ))}
                 </div>
                 <span className="rounded bg-blue-50 text-[#C25E34] border border-blue-200 font-bold px-2 py-0.5 text-xs uppercase tracking-wider">
-                  {hotel.tags[0] || 'Verified Stay'}
+                  {(Array.isArray(hotel.tags) && hotel.tags[0]) || 'Verified Stay'}
                 </span>
                 <span className="rounded-full bg-stone-100 text-stone-800 border border-stone-200 text-[10px] font-bold px-2 py-0.5">
                   ✓ Verified Quality Partner
@@ -209,7 +209,7 @@ function HotelDetailContent() {
               </h1>
               <p className="flex items-center gap-1.5 text-xs sm:text-sm text-slate-500 mt-1">
                 <MapPin className="h-4 w-4 text-[#C25E34] shrink-0" />
-                <span>{hotel.area}, {hotel.city} • {hotel.distanceFromBeachOrCenter}</span>
+                <span>{hotel.area || hotel.city}, {hotel.city} • {hotel.distanceFromBeach || hotel.distanceFromBeachOrCenter || 'Prime Location'}</span>
               </p>
             </div>
 
@@ -335,7 +335,7 @@ function HotelDetailContent() {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {hotel.rooms.map((room: any) => {
+              {hotelRooms.map((room: any) => {
                 const isSelected = selectedRoomId === room.id;
                 return (
                   <div
@@ -477,7 +477,7 @@ function HotelDetailContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {hotel.rooms.map((r: any) => (
+                  {hotelRooms.map((r: any) => (
                     <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-4 font-bold text-sm text-slate-900">{r.name}</td>
                       <td className="p-4 text-slate-600">{r.sqft} sq.ft</td>

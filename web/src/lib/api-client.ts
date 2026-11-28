@@ -273,7 +273,7 @@ export const apiClient = {
     email: string;
     phone: string;
     password: string;
-    services: ('HOTELS' | 'CABS')[];
+    services: ('HOTELS' | 'CABS' | 'BUSES')[];
   }) {
     const res = await fetch(`${API_BASE_URL}/partner/auth/register`, {
       method: 'POST',
@@ -311,7 +311,7 @@ export const apiClient = {
     }
   },
 
-  async updatePartnerServices(partnerId: string, services: ('HOTELS' | 'CABS')[]) {
+  async updatePartnerServices(partnerId: string, services: ('HOTELS' | 'CABS' | 'BUSES')[]) {
     const res = await fetch(`${API_BASE_URL}/partner/services?partnerId=${encodeURIComponent(partnerId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -422,6 +422,36 @@ export const apiClient = {
 
   async getPartnerVehicles(partnerId?: string) {
     return this.getOperatorVehicles(partnerId);
+  },
+
+  async createPartnerBus(payload: any, partnerId?: string) {
+    const url = partnerId
+      ? `${API_BASE_URL}/partner/buses?partnerId=${encodeURIComponent(partnerId)}`
+      : `${API_BASE_URL}/partner/buses`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to list bus route');
+    }
+    return await res.json();
+  },
+
+  async getPartnerBuses(partnerId?: string) {
+    try {
+      const url = partnerId
+        ? `${API_BASE_URL}/partner/buses?partnerId=${encodeURIComponent(partnerId)}`
+        : `${API_BASE_URL}/partner/buses`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch partner buses');
+      const data = await res.json();
+      return data.data || [];
+    } catch {
+      return [];
+    }
   },
 
   async getOperatorTrips(operatorId?: string) {
