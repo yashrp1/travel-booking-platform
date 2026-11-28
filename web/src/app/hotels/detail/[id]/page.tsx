@@ -158,8 +158,8 @@ function HotelDetailContent() {
       plan === 'BREAKFAST'
         ? 'Free Buffet Breakfast (CP)'
         : plan === 'ALL_MEALS'
-        ? 'Breakfast + Dinner (MAP)'
-        : 'Room Only (EP)';
+          ? 'Breakfast + Dinner (MAP)'
+          : 'Room Only (EP)';
 
     router.push(
       `/hotels/checkout?hotelId=${hotel.id}&roomId=${targetRoom.id}&price=${finalPrice}&mealPlan=${encodeURIComponent(
@@ -279,49 +279,43 @@ function HotelDetailContent() {
         <div className="border-b border-slate-200 bg-white rounded-2xl px-4 py-2 sticky top-16 z-20 shadow-xs flex items-center gap-6 text-xs font-bold">
           <button
             onClick={() => setActiveTab('rooms')}
-            className={`pb-1 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'rooms' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
+            className={`pb-1 border-b-2 transition-colors cursor-pointer ${activeTab === 'rooms' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
           >
             Room Types &amp; Rate Plans
           </button>
           <button
             onClick={() => setActiveTab('comparison')}
-            className={`pb-1 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'comparison' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
+            className={`pb-1 border-b-2 transition-colors cursor-pointer ${activeTab === 'comparison' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
           >
             Compare Rooms
           </button>
           <button
             onClick={() => setActiveTab('amenities')}
-            className={`pb-1 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'amenities' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
+            className={`pb-1 border-b-2 transition-colors cursor-pointer ${activeTab === 'amenities' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
           >
             Amenities &amp; Facilities
           </button>
           <button
             onClick={() => setActiveTab('policies')}
-            className={`pb-1 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'policies' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
+            className={`pb-1 border-b-2 transition-colors cursor-pointer ${activeTab === 'policies' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
           >
             House Rules &amp; Policies
           </button>
           <button
             onClick={() => setActiveTab('location')}
-            className={`pb-1 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'location' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
+            className={`pb-1 border-b-2 transition-colors cursor-pointer ${activeTab === 'location' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
           >
             Location &amp; Proximity
           </button>
           <button
             onClick={() => setActiveTab('reviews')}
-            className={`pb-1 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'reviews' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
-            }`}
+            className={`pb-1 border-b-2 transition-colors cursor-pointer ${activeTab === 'reviews' ? 'border-[#C25E34] text-[#C25E34]' : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
           >
             Guest Reviews ({reviewsList.length || hotel.reviewCount})
           </button>
@@ -340,11 +334,10 @@ function HotelDetailContent() {
                 return (
                   <div
                     key={room.id}
-                    className={`rounded-2xl bg-white border-2 p-6 flex flex-col justify-between transition-all ${
-                      isSelected
-                        ? 'border-[#C25E34] shadow-md bg-blue-50/20'
-                        : 'border-slate-200 shadow-xs'
-                    }`}
+                    className={`rounded-2xl bg-white border-2 p-6 flex flex-col justify-between transition-all ${isSelected
+                      ? 'border-[#C25E34] shadow-md bg-blue-50/20'
+                      : 'border-slate-200 shadow-xs'
+                      }`}
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -391,11 +384,10 @@ function HotelDetailContent() {
                                 e.stopPropagation();
                                 setSelectedMealPlans((prev) => ({ ...prev, [room.id]: plan.id as any }));
                               }}
-                              className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition-all ${
-                                isChecked
-                                  ? 'border-[#C25E34] bg-[#FAF8F5] text-[#18181B] font-bold'
-                                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                              }`}
+                              className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition-all ${isChecked
+                                ? 'border-[#C25E34] bg-[#FAF8F5] text-[#18181B] font-bold'
+                                : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                                }`}
                             >
                               <div className="flex items-center gap-2">
                                 <input
@@ -749,9 +741,8 @@ function HotelDetailContent() {
               <button
                 key={i}
                 onClick={() => setGalleryActiveIdx(i)}
-                className={`h-16 w-24 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                  galleryActiveIdx === i ? 'border-[#C25E34] scale-105' : 'border-white/30 opacity-60'
-                }`}
+                className={`h-16 w-24 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${galleryActiveIdx === i ? 'border-[#C25E34] scale-105' : 'border-white/30 opacity-60'
+                  }`}
               >
                 <img src={img} alt="" className="h-full w-full object-cover" />
               </button>

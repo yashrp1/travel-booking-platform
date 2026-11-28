@@ -50,12 +50,14 @@ export default function BusesPage() {
   // Search States
   const [fromCity, setFromCity] = useState('New Delhi');
   const [toCity, setToCity] = useState('Manali');
-  const [travelDate, setTravelDate] = useState(() => {
+  const [travelDate, setTravelDate] = useState('2026-11-29');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
     const today = new Date();
     today.setDate(today.getDate() + 1);
-    return today.toISOString().split('T')[0];
-  });
-  const [loading, setLoading] = useState(false);
+    setTravelDate(today.toISOString().split('T')[0]);
+  }, []);
 
   // Filter States
   const [busTypeFilter, setBusTypeFilter] = useState('ALL');
