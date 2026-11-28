@@ -23,7 +23,7 @@ function ReviewFormContent() {
   const [travellerType, setTravellerType] = useState<string>('Couple');
   const [title, setTitle] = useState<string>('');
   const [comment, setComment] = useState<string>('');
-  const [authorName, setAuthorName] = useState<string>('Rahul Sharma');
+  const [authorName, setAuthorName] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(false);
 

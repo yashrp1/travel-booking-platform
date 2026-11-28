@@ -52,11 +52,11 @@ export default function BusesPage() {
   const [selectedDroppingPoint, setSelectedDroppingPoint] = useState<string>('');
 
   // Passenger form
-  const [passengerName, setPassengerName] = useState('Rahul Sharma');
-  const [passengerAge, setPassengerAge] = useState('28');
+  const [passengerName, setPassengerName] = useState('');
+  const [passengerAge, setPassengerAge] = useState('');
   const [passengerGender, setPassengerGender] = useState('M');
-  const [passengerPhone, setPassengerPhone] = useState('+91 98765 43210');
-  const [passengerEmail, setPassengerEmail] = useState('rahul.sharma@example.com');
+  const [passengerPhone, setPassengerPhone] = useState('');
+  const [passengerEmail, setPassengerEmail] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<any | null>(null);
 

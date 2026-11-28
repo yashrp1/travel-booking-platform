@@ -32,15 +32,15 @@ export default function UnifiedPartnerPortal() {
   const [authMode, setAuthMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
   // Auth form states
-  const [loginEmail, setLoginEmail] = useState('integrated@wanderstay.com');
-  const [loginPassword, setLoginPassword] = useState('Partner@2026');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [regData, setRegData] = useState({
     businessName: '',
     contactName: '',
     email: '',
     phone: '',
-    password: 'Partner@2026',
-    services: ['HOTELS', 'CABS'] as ('HOTELS' | 'CABS')[],
+    password: '',
+    services: ['HOTELS'] as ('HOTELS' | 'CABS')[],
   });
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,13 +55,7 @@ export default function UnifiedPartnerPortal() {
 
   // MMT IngoMMT Parity: 90-Day Calendar State
   const [selectedCalendarPropId, setSelectedCalendarPropId] = useState<string>('');
-  const [calendarOverrides, setCalendarOverrides] = useState<Record<string, { blocked: boolean; surgePct?: number; customPrice?: number }>>({
-    '2026-11-20': { blocked: false, surgePct: 25 },
-    '2026-11-21': { blocked: false, surgePct: 25 },
-    '2026-12-25': { blocked: false, surgePct: 40, customPrice: 18500 },
-    '2026-12-31': { blocked: false, surgePct: 50, customPrice: 22000 },
-    '2026-11-25': { blocked: true },
-  });
+  const [calendarOverrides, setCalendarOverrides] = useState<Record<string, { blocked: boolean; surgePct?: number; customPrice?: number }>>({});
 
   // Modals
   const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
@@ -71,30 +65,30 @@ export default function UnifiedPartnerPortal() {
   // Hotel Listing Form
   const [hotelForm, setHotelForm] = useState({
     name: '',
-    propertyType: 'RESORT',
-    city: 'Goa',
+    propertyType: 'HOTEL',
+    city: '',
     address: '',
-    starRating: 5,
-    basePrice: 12500,
-    discountedPrice: 9900,
-    amenities: 'Infinity Pool, High-Speed WiFi, Spa, Gourmet Breakfast, Ocean View',
-    imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
+    starRating: 4,
+    basePrice: 0,
+    discountedPrice: 0,
+    amenities: '',
+    imageUrl: '',
   });
 
   // Cab Listing Form
   const [cabForm, setCabForm] = useState({
-    category: 'INNOVA_CRYSTA',
-    name: 'Toyota Innova Crysta ZX',
-    modelExamples: 'Toyota Innova Crysta 2.4 VX Chauffeur Driven',
-    registrationNumber: 'DL 01 AB 8899',
-    seatCapacity: 6,
-    luggageCapacity: 4,
-    baseFarePerKm: 18.5,
-    extraKmRate: 18.5,
-    driverAllowance: 400,
-    driverName: 'Vikram Singh',
-    driverPhone: '+91 98765 43210',
-    imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800',
+    category: 'SEDAN',
+    name: '',
+    modelExamples: '',
+    registrationNumber: '',
+    seatCapacity: 4,
+    luggageCapacity: 2,
+    baseFarePerKm: 12,
+    extraKmRate: 12,
+    driverAllowance: 300,
+    driverName: '',
+    driverPhone: '',
+    imageUrl: '',
   });
 
   // Rate Editing

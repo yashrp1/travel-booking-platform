@@ -24,7 +24,7 @@ import {
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';
-import { FEATURED_HOTELS, Hotel } from '@/data/mock-data';
+import type { Hotel } from '@/data/mock-data';
 import { apiClient } from '@/lib/api-client';
 
 function HotelListingContent() {
@@ -47,8 +47,8 @@ function HotelListingContent() {
   const [filterAssured, setFilterAssured] = useState(false);
   const [priceMax, setPriceMax] = useState<number>(50000);
   const [sortBy, setSortBy] = useState<'POPULAR' | 'PRICE_ASC' | 'PRICE_DESC' | 'RATING'>('POPULAR');
-  const [hotelList, setHotelList] = useState<Hotel[]>(FEATURED_HOTELS);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hotelList, setHotelList] = useState<Hotel[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // MMT Parity Features: Taxes Toggle, Map View, Locality, Property Type
   const [showTaxes, setShowTaxes] = useState<boolean>(false);
@@ -71,12 +71,16 @@ function HotelListingContent() {
           starRatings: selectedStars.length > 0 ? selectedStars : undefined,
           maxPrice: priceMax < 50000 ? priceMax : undefined,
         });
-        if (active && res && res.hotels && res.hotels.length > 0) {
-          setHotelList(res.hotels);
-          setMapSelectedHotel(res.hotels[0]);
+        if (active) {
+          if (res && res.hotels) {
+            setHotelList(res.hotels);
+            if (res.hotels.length > 0) setMapSelectedHotel(res.hotels[0]);
+          } else {
+            setHotelList([]);
+          }
         }
       } catch {
-        // Fallback
+        if (active) setHotelList([]);
       } finally {
         if (active) setIsLoading(false);
       }

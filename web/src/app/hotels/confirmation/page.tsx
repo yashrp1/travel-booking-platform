@@ -25,7 +25,7 @@ function HotelConfirmationContent() {
   const hotel = searchParams.get('hotel') || 'Taj Fort Aguada Resort & Spa';
   const city = searchParams.get('city') || 'Goa';
   const amount = searchParams.get('amount') || '15110';
-  const guestName = searchParams.get('name') || 'Mr Rahul Sharma';
+  const guestName = searchParams.get('name') || 'Guest';
   const isPayAtHotel = searchParams.get('payMode') === 'hotel';
 
   const handlePrint = () => {

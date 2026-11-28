@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CabQuoteDto } from './dto/cab-quote.dto';
 
 export interface VehicleItem {
@@ -25,94 +26,35 @@ export interface VehicleItem {
 
 @Injectable()
 export class CabsService {
-  private fleet: VehicleItem[] = [
-    {
-      id: 'cab_hatchback',
-      category: 'HATCHBACK',
-      name: 'Wagon R or similar',
-      modelExamples: 'Maruti WagonR, Celerio, Tata Tiago',
-      registrationNumber: 'DL 01 AB 4092',
-      seatCapacity: 4,
-      luggageCapacity: 2,
-      ac: true,
-      imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600',
-      baseFarePerKm: 11.5,
-      extraKmRate: 11.5,
-      driverAllowance: 300,
-      driverName: 'Suresh Kumar',
-      driverPhone: '+91 98761 23456',
-      operatorId: 'operator_delhi_cabs',
-      operatorName: 'Delhi Express Travels',
-      status: 'ACTIVE',
-      createdAt: '2026-01-15T10:00:00.000Z',
-    },
-    {
-      id: 'cab_sedan',
-      category: 'SEDAN',
-      name: 'Dzire, Etios or similar',
-      modelExamples: 'Maruti Suzuki Dzire, Toyota Etios, Hyundai Aura',
-      registrationNumber: 'DL 04 CD 7781',
-      seatCapacity: 4,
-      luggageCapacity: 3,
-      ac: true,
-      imageUrl: 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600',
-      baseFarePerKm: 13.0,
-      extraKmRate: 13.0,
-      driverAllowance: 300,
-      driverName: 'Vikram Singh',
-      driverPhone: '+91 98123 45678',
-      operatorId: 'operator_delhi_cabs',
-      operatorName: 'Delhi Express Travels',
-      status: 'ACTIVE',
-      createdAt: '2026-01-20T10:00:00.000Z',
-    },
-    {
-      id: 'cab_suv',
-      category: 'SUV',
-      name: 'Ertiga, Carens or similar',
-      modelExamples: 'Maruti Suzuki Ertiga, Kia Carens, Renault Triber',
-      registrationNumber: 'MH 02 EF 1290',
-      seatCapacity: 6,
-      luggageCapacity: 4,
-      ac: true,
-      imageUrl: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600',
-      baseFarePerKm: 17.5,
-      extraKmRate: 17.5,
-      driverAllowance: 400,
-      driverName: 'Santosh Jadhav',
-      driverPhone: '+91 98333 44556',
-      operatorId: 'operator_mumbai_fleet',
-      operatorName: 'Mumbai Highway Logistics',
-      status: 'ACTIVE',
-      createdAt: '2026-02-01T10:00:00.000Z',
-    },
-    {
-      id: 'cab_premium_suv',
-      category: 'PREMIUM_SUV',
-      name: 'Innova Crysta',
-      modelExamples: 'Toyota Innova Crysta / Hycross',
-      registrationNumber: 'KA 05 GH 9921',
-      seatCapacity: 7,
-      luggageCapacity: 5,
-      ac: true,
-      imageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=600',
-      baseFarePerKm: 22.0,
-      extraKmRate: 22.0,
-      driverAllowance: 500,
-      driverName: 'Ramesh Gowda',
-      driverPhone: '+91 98450 11223',
-      operatorId: 'operator_bengaluru_limo',
-      operatorName: 'Royal Chauffeur Services',
-      status: 'ACTIVE',
-      createdAt: '2026-02-10T10:00:00.000Z',
-    },
-  ];
+  constructor(private readonly prisma: PrismaService) {}
+
+  private mapDbVehicle(v: any): VehicleItem {
+    return {
+      id: v.id,
+      category: v.categoryName || 'SEDAN',
+      name: v.name || 'Cab',
+      modelExamples: v.modelExamples || 'Commercial Cab',
+      registrationNumber: v.registrationNumber,
+      seatCapacity: v.seatCapacity || 4,
+      luggageCapacity: v.luggageCapacity || 2,
+      ac: v.ac ?? true,
+      imageUrl: v.imageUrl || 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600',
+      baseFarePerKm: Number(v.baseFarePerKm) || 12.0,
+      extraKmRate: Number(v.extraKmRate) || 12.0,
+      driverAllowance: Number(v.driverAllowance) || 300,
+      driverName: v.driverName || 'Verified Chauffeur',
+      driverPhone: v.driverPhone || '',
+      operatorId: v.operatorId || '',
+      operatorName: v.operatorName || 'Partner Operator',
+      status: (v.status as any) || (v.isActive ? 'ACTIVE' : 'SUSPENDED'),
+      createdAt: v.createdAt ? v.createdAt.toISOString() : new Date().toISOString(),
+    };
+  }
 
   async getQuote(dto: CabQuoteDto) {
-    // Intercity routing distance calculation
-    let estimatedDistanceKm = 240; // Default Delhi -> Agra
-    const lowerPickup = dto.pickupLocation.toLowerCase();
-    const lowerDrop = dto.dropLocation.toLowerCase();
+    let estimatedDistanceKm = 240;
+    const lowerPickup = (dto.pickupLocation || '').toLowerCase();
+    const lowerDrop = (dto.dropLocation || '').toLowerCase();
 
     if (lowerPickup.includes('mumbai') && lowerDrop.includes('pune')) {
       estimatedDistanceKm = 150;
@@ -126,15 +68,23 @@ export class CabsService {
 
     const durationMinutes = Math.round(estimatedDistanceKm * 1.8);
 
-    // Only quote active vehicles approved by platform
-    const activeFleet = this.fleet.filter((v) => v.status === 'ACTIVE');
+    let activeVehicles: any[] = [];
+    try {
+      activeVehicles = await this.prisma.cabVehicle.findMany({
+        where: { status: 'ACTIVE', isActive: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch {
+      activeVehicles = [];
+    }
 
-    const vehicleOptions = activeFleet.map((v) => {
-      const distanceFare = Math.round(v.baseFarePerKm * estimatedDistanceKm);
-      const totalEstimatedFare = distanceFare + v.driverAllowance;
+    const options = activeVehicles.map((v) => {
+      const mapped = this.mapDbVehicle(v);
+      const distanceFare = Math.round(mapped.baseFarePerKm * estimatedDistanceKm);
+      const totalEstimatedFare = distanceFare + mapped.driverAllowance;
 
       return {
-        ...v,
+        ...mapped,
         estimatedDistanceKm,
         durationMinutes,
         totalEstimatedFare,
@@ -150,7 +100,7 @@ export class CabsService {
       pickupTime: dto.pickupTime || '07:00 AM',
       estimatedDistanceKm,
       durationMinutes,
-      options: vehicleOptions,
+      options,
     };
   }
 
@@ -159,71 +109,97 @@ export class CabsService {
   async addOperatorVehicle(payload: Partial<VehicleItem>) {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const id = `cab_${(payload.category || 'sedan').toLowerCase()}_${randomSuffix}`;
+    const regNumber = payload.registrationNumber || `DL ${Math.floor(10 + Math.random() * 89)} XY ${randomSuffix}`;
 
-    const newVehicle: VehicleItem = {
-      id,
-      category: payload.category || 'SEDAN',
-      name: payload.name || 'Swift Dzire or equivalent',
-      modelExamples: payload.modelExamples || 'Maruti Suzuki Dzire, Toyota Etios',
-      registrationNumber: payload.registrationNumber || `DL ${Math.floor(10 + Math.random() * 89)} XY ${randomSuffix}`,
-      seatCapacity: Number(payload.seatCapacity) || 4,
-      luggageCapacity: Number(payload.luggageCapacity) || 3,
-      ac: payload.ac ?? true,
-      imageUrl: payload.imageUrl || 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600',
-      baseFarePerKm: Number(payload.baseFarePerKm) || 13.5,
-      extraKmRate: Number(payload.extraKmRate) || Number(payload.baseFarePerKm) || 13.5,
-      driverAllowance: Number(payload.driverAllowance) || 350,
-      driverName: payload.driverName || 'Assigned Chauffeur',
-      driverPhone: payload.driverPhone || '+91 98765 43210',
-      operatorId: payload.operatorId || 'operator_demo_fleet',
-      operatorName: payload.operatorName || 'City Chauffeurs Ltd',
-      status: 'PENDING_APPROVAL', // Requires SuperAdmin sign-off to appear on marketplace
-      createdAt: new Date().toISOString(),
-    };
+    const created = await this.prisma.cabVehicle.create({
+      data: {
+        id,
+        categoryName: payload.category || 'SEDAN',
+        name: payload.name || 'Commercial Sedan or equivalent',
+        modelExamples: payload.modelExamples || 'Maruti Suzuki Dzire, Toyota Etios',
+        registrationNumber: regNumber,
+        seatCapacity: Number(payload.seatCapacity) || 4,
+        luggageCapacity: Number(payload.luggageCapacity) || 3,
+        ac: payload.ac ?? true,
+        imageUrl: payload.imageUrl || 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600',
+        baseFarePerKm: Number(payload.baseFarePerKm) || 13.5,
+        extraKmRate: Number(payload.extraKmRate) || Number(payload.baseFarePerKm) || 13.5,
+        driverAllowance: Number(payload.driverAllowance) || 350,
+        driverName: payload.driverName || 'Assigned Chauffeur',
+        driverPhone: payload.driverPhone || '+91 98765 43210',
+        operatorId: payload.operatorId || 'operator_partner',
+        operatorName: payload.operatorName || 'Partner Fleet Solutions',
+        status: 'PENDING_APPROVAL',
+        isActive: false,
+      },
+    });
 
-    this.fleet.unshift(newVehicle);
-    return newVehicle;
+    return this.mapDbVehicle(created);
   }
 
   async getOperatorVehicles(operatorId?: string) {
-    if (operatorId) {
-      return this.fleet.filter((v) => v.operatorId === operatorId);
+    try {
+      const whereClause = operatorId ? { operatorId } : {};
+      const list = await this.prisma.cabVehicle.findMany({
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+      });
+      return list.map((v) => this.mapDbVehicle(v));
+    } catch {
+      return [];
     }
-    return this.fleet;
   }
 
   // --- ADMIN METHODS ---
 
   async getAllVehiclesForAdmin() {
-    return this.fleet;
+    try {
+      const list = await this.prisma.cabVehicle.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+      return list.map((v) => this.mapDbVehicle(v));
+    } catch {
+      return [];
+    }
   }
 
   async getPendingVehicles() {
-    return this.fleet.filter((v) => v.status === 'PENDING_APPROVAL');
+    try {
+      const list = await this.prisma.cabVehicle.findMany({
+        where: { status: 'PENDING_APPROVAL' },
+        orderBy: { createdAt: 'desc' },
+      });
+      return list.map((v) => this.mapDbVehicle(v));
+    } catch {
+      return [];
+    }
   }
 
   async setVehicleApproval(id: string, decision: 'APPROVE' | 'REJECT', notes?: string) {
-    const vehicle = this.fleet.find((v) => v.id === id);
-    if (!vehicle) {
-      throw new NotFoundException(`Vehicle with ID ${id} not found`);
-    }
-
-    if (decision === 'APPROVE') {
-      vehicle.status = 'ACTIVE';
-    } else {
-      vehicle.status = 'REJECTED';
-      vehicle.rejectionReason = notes || 'Does not meet commercial vehicle transport standards.';
-    }
-    return vehicle;
+    const isApproved = decision === 'APPROVE';
+    const updated = await this.prisma.cabVehicle.update({
+      where: { id },
+      data: {
+        status: isApproved ? 'ACTIVE' : 'REJECTED',
+        isActive: isApproved,
+      },
+    });
+    return this.mapDbVehicle(updated);
   }
 
   async toggleVehicleStatus(id: string) {
-    const vehicle = this.fleet.find((v) => v.id === id);
+    const vehicle = await this.prisma.cabVehicle.findUnique({ where: { id } });
     if (!vehicle) {
       throw new NotFoundException(`Vehicle with ID ${id} not found`);
     }
-    vehicle.status = vehicle.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    return vehicle;
+    const newStatus = vehicle.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    const updated = await this.prisma.cabVehicle.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        isActive: newStatus === 'ACTIVE',
+      },
+    });
+    return this.mapDbVehicle(updated);
   }
 }
-

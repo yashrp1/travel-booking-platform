@@ -17,7 +17,7 @@ import {
   ChevronRight,
   Check,
 } from 'lucide-react';
-import { FEATURED_HOTELS } from '@/data/mock-data';
+// removed mock-data import
 import { apiClient } from '@/lib/api-client';
 import AuthModal, { CustomerProfile } from '@/components/auth/AuthModal';
 
@@ -67,19 +67,47 @@ function HotelCheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const hotelId = searchParams.get('hotelId') || 'htl_taj_fort_aguada';
-  const priceParam = Number(searchParams.get('price')) || 14500;
+  const hotelId = searchParams.get('hotelId') || '';
+  const priceParam = Number(searchParams.get('price')) || 4500;
   const mealPlanParam = searchParams.get('mealPlan') || 'Free Buffet Breakfast (CP)';
 
-  const hotel =
-    FEATURED_HOTELS.find((h) => h.id === hotelId) || FEATURED_HOTELS[0];
+  const [hotel, setHotel] = useState<any>({
+    id: hotelId,
+    name: 'Selected Stay',
+    city: 'India',
+    area: 'Central',
+    starRating: 4,
+    userRating: 4.8,
+    reviewCount: 1,
+    thumbnailUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800',
+    rooms: [{ id: 'room_std', name: 'Deluxe Room', price: priceParam }],
+  });
+
+  useEffect(() => {
+    let active = true;
+    async function loadHotel() {
+      if (!hotelId) return;
+      try {
+        const data = await apiClient.getHotelDetails(hotelId);
+        if (active && data) {
+          setHotel(data);
+        }
+      } catch (err) {
+        console.error('Failed to load hotel details for checkout:', err);
+      }
+    }
+    loadHotel();
+    return () => {
+      active = false;
+    };
+  }, [hotelId]);
 
   // Form State
   const [title, setTitle] = useState('Mr');
-  const [firstName, setFirstName] = useState('Rahul');
-  const [lastName, setLastName] = useState('Sharma');
-  const [email, setEmail] = useState('rahul.sharma@example.com');
-  const [phone, setPhone] = useState('9876543210');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [paymentMode, setPaymentMode] = useState<'PAY_NOW' | 'PAY_AT_HOTEL'>('PAY_NOW');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);

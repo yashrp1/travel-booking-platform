@@ -19,7 +19,7 @@ import {
   MapPin,
   Loader2,
 } from 'lucide-react';
-import { CAB_FLEET, CabPackage } from '@/data/mock-data';
+import type { CabPackage } from '@/data/mock-data';
 import { apiClient } from '@/lib/api-client';
 
 function CabListingContent() {
@@ -37,13 +37,16 @@ function CabListingContent() {
 
   // Distance & Options from API
   const [estimatedDistance, setEstimatedDistance] = useState<number>(240);
-  const [selectedCabId, setSelectedCabId] = useState<string>(CAB_FLEET[1].id); // Sedan by default
-  const [selectedCabDetails, setSelectedCabDetails] = useState<CabPackage | null>(null);
+  const [availableCabs, setAvailableCabs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [selectedCabId, setSelectedCabId] = useState<string>('');
+  const [selectedCabDetails, setSelectedCabDetails] = useState<any | null>(null);
   const [isBooking, setIsBooking] = useState<boolean>(false);
 
   useEffect(() => {
     let active = true;
     async function fetchQuote() {
+      setIsLoading(true);
       try {
         const quote = await apiClient.getCabQuote({
           tripType,
@@ -52,11 +55,19 @@ function CabListingContent() {
           departureDate: dateParam,
           pickupTime: timeParam,
         });
-        if (active && quote && quote.estimatedDistanceKm) {
-          setEstimatedDistance(quote.estimatedDistanceKm);
+        if (active && quote) {
+          if (quote.estimatedDistanceKm) setEstimatedDistance(quote.estimatedDistanceKm);
+          if (quote.options && quote.options.length > 0) {
+            setAvailableCabs(quote.options);
+            setSelectedCabId(quote.options[0].id);
+          } else {
+            setAvailableCabs([]);
+          }
         }
       } catch {
-        // Fallback to default
+        if (active) setAvailableCabs([]);
+      } finally {
+        if (active) setIsLoading(false);
       }
     }
     fetchQuote();
@@ -68,8 +79,8 @@ function CabListingContent() {
   const handleBookCab = async (cab: CabPackage) => {
     setIsBooking(true);
     try {
-      const baseFare = Math.round(cab.baseFareOneWayPerKm * estimatedDistance);
-      const tollTaxes = Math.round(cab.driverAllowancePerDay || 450);
+      const baseFare = Math.round(cab.baseFarePerKm * estimatedDistance);
+      const tollTaxes = Math.round(cab.driverAllowance || 450);
 
       const booking = await apiClient.initiateCabBooking({
         cabCategoryId: cab.category.toLowerCase(),
@@ -78,14 +89,13 @@ function CabListingContent() {
         destinationCity: toCity,
         pickupDate: dateParam,
         pickupTime: timeParam,
-        passengerName: 'Rohit Verma',
-        passengerPhone: '+91 98765 43210',
-        passengerEmail: 'rohit.verma@example.com',
-        pickupAddress: `${fromCity} Airport / Central Location`,
-        dropAddress: `${toCity} Central Drop Point`,
+        passengerName: 'Valued Passenger',
+        passengerPhone: '',
+        passengerEmail: '',
+        pickupAddress: `${fromCity} Pickup Point`,
+        dropAddress: `${toCity} Drop Point`,
         baseFare,
         tollTaxes,
-        couponCode: 'CABRUSH',
       });
 
       router.push(
@@ -97,17 +107,8 @@ function CabListingContent() {
           timeParam
         )}`
       );
-    } catch {
-      const totalFare = Math.round(cab.baseFareOneWayPerKm * estimatedDistance + cab.driverAllowancePerDay);
-      router.push(
-        `/cabs/confirmation?ref=MMT-CAB-${Math.floor(100000 + Math.random() * 900000)}&cab=${encodeURIComponent(
-          cab.name
-        )}&category=${cab.category}&from=${encodeURIComponent(
-          fromCity
-        )}&to=${encodeURIComponent(toCity)}&fare=${totalFare}&date=${dateParam}&time=${encodeURIComponent(
-          timeParam
-        )}`
-      );
+    } catch (err: any) {
+      alert(err.message || 'Cab reservation could not be processed. Please check back later.');
     } finally {
       setIsBooking(false);
     }
@@ -212,110 +213,129 @@ function CabListingContent() {
 
         {/* Cabs List */}
         <div className="space-y-4">
-          {CAB_FLEET.map((cab) => {
-            const calculatedFare = Math.round(
-              cab.baseFareOneWayPerKm * estimatedDistance + cab.driverAllowancePerDay
-            );
-            return (
-              <div
-                key={cab.id}
-                className="rounded-2xl bg-white border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+          {isLoading ? (
+            <div className="p-12 text-center text-slate-500 font-semibold bg-white rounded-2xl border border-slate-200">
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-[#C25E34] mb-2" />
+              <span>Fetching live commercial fleet quotes from database...</span>
+            </div>
+          ) : availableCabs.length > 0 ? (
+            availableCabs.map((cab) => {
+              const calculatedFare = cab.totalEstimatedFare || Math.round(
+                (cab.baseFarePerKm || 13) * estimatedDistance + (cab.driverAllowance || 350)
+              );
+              return (
+                <div
+                  key={cab.id}
+                  className="rounded-2xl bg-white border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                >
+                  {/* Left Vehicle Image & Category */}
+                  <div className="flex items-center gap-4">
+                    <div className="h-24 w-36 rounded-xl bg-slate-50 overflow-hidden shrink-0 border border-slate-200 p-1 flex items-center justify-center">
+                      <img
+                        src={cab.imageUrl || 'https://images.unsplash.com/photo-1550355291-bbee04a92027?w=600'}
+                        alt={cab.name}
+                        className="h-full w-full object-cover rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <span className="rounded bg-slate-900 text-white px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
+                        {cab.category}
+                      </span>
+                      <h3 className="text-xl font-black text-slate-900 mt-1">
+                        {cab.name}
+                      </h3>
+                      <p className="text-xs text-slate-500">{cab.modelExamples}</p>
+
+                      {/* Capacity Specs */}
+                      <div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Users className="h-3.5 w-3.5 text-slate-400" /> {cab.seatCapacity} Seats
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 font-semibold">
+                          <Briefcase className="h-3.5 w-3.5 text-slate-400" /> {cab.luggageCapacity} Bags
+                        </span>
+                        <span>•</span>
+                        <span className="flex items-center gap-1 text-amber-500 font-bold">
+                          <Wind className="h-3.5 w-3.5" /> AC Included
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Center Inclusions & Highlights */}
+                  <div className="text-xs text-slate-600 space-y-1">
+                    <div className="flex items-center gap-1 text-stone-700 font-semibold">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <span>Free cancellation up to 6 hrs prior</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-700 font-medium">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-[#C25E34] shrink-0" />
+                      <span>Includes {estimatedDistance} km allowance</span>
+                    </div>
+                    <div className="text-slate-500 text-[11px]">
+                      Extra km fare: ₹{cab.extraKmRate || cab.baseFarePerKm || 13}/km after {estimatedDistance} km
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCabDetails(cab)}
+                      className="text-[11px] font-bold text-[#C25E34] hover:underline flex items-center gap-1 pt-1 cursor-pointer"
+                    >
+                      <Info className="h-3 w-3" />
+                      <span>View Inclusions, Exclusions &amp; T&amp;C</span>
+                    </button>
+                  </div>
+
+                  {/* Right Pricing & Book Action */}
+                  <div className="text-left md:text-right shrink-0 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 flex md:flex-col justify-between items-center md:items-end">
+                    <div>
+                      <div className="flex items-baseline gap-1 md:justify-end">
+                        <span className="text-2xl font-black text-slate-900">
+                          ₹{calculatedFare.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 block font-medium">
+                        toll &amp; state tax payable at booths
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isBooking}
+                      onClick={() => handleBookCab(cab)}
+                      className="mt-3 btn-search-gradient rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isBooking ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span>Reserving...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Book Cab</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
+              <h3 className="text-base font-bold text-slate-900">No Cabs Available on this Route</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                No active commercial fleet is currently registered for this corridor in the database.
+              </p>
+              <Link
+                href="/partner"
+                className="mt-4 inline-block px-5 py-2 rounded-xl bg-[#C25E34] text-white text-xs font-bold hover:bg-[#A84F2A]"
               >
-                {/* Left Vehicle Image & Category */}
-                <div className="flex items-center gap-4">
-                  <div className="h-24 w-36 rounded-xl bg-slate-50 overflow-hidden shrink-0 border border-slate-200 p-1 flex items-center justify-center">
-                    <img
-                      src={cab.imageUrl}
-                      alt={cab.name}
-                      className="h-full w-full object-cover rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <span className="rounded bg-slate-900 text-white px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">
-                      {cab.category}
-                    </span>
-                    <h3 className="text-xl font-black text-slate-900 mt-1">
-                      {cab.name}
-                    </h3>
-                    <p className="text-xs text-slate-500">{cab.modelExamples}</p>
-
-                    {/* Capacity Specs */}
-                    <div className="mt-2 flex items-center gap-3 text-xs text-slate-600">
-                      <span className="flex items-center gap-1 font-semibold">
-                        <Users className="h-3.5 w-3.5 text-slate-400" /> {cab.seatCapacity} Seats
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 font-semibold">
-                        <Briefcase className="h-3.5 w-3.5 text-slate-400" /> {cab.luggageCapacity} Bags
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1 text-amber-500 font-bold">
-                        <Wind className="h-3.5 w-3.5" /> AC Included
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Center Inclusions & Highlights */}
-                <div className="text-xs text-slate-600 space-y-1">
-                  <div className="flex items-center gap-1 text-stone-700 font-semibold">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                    <span>Free cancellation up to 6 hrs prior</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-slate-700 font-medium">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-[#C25E34] shrink-0" />
-                    <span>Includes {estimatedDistance} km allowance</span>
-                  </div>
-                  <div className="text-slate-500 text-[11px]">
-                    Extra km fare: ₹{cab.extraKmRate}/km after {estimatedDistance} km
-                  </div>
-
-                  {/* MakeMyTrip Inclusions & Exclusions details link */}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCabDetails(cab)}
-                    className="text-[11px] font-bold text-[#C25E34] hover:underline flex items-center gap-1 pt-1 cursor-pointer"
-                  >
-                    <Info className="h-3 w-3" />
-                    <span>View Inclusions, Exclusions &amp; T&amp;C</span>
-                  </button>
-                </div>
-
-                {/* Right Pricing & Book Action */}
-                <div className="text-left md:text-right shrink-0 w-full md:w-auto pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 flex md:flex-col justify-between items-center md:items-end">
-                  <div>
-                    <div className="flex items-baseline gap-1 md:justify-end">
-                      <span className="text-2xl font-black text-slate-900">
-                        ₹{calculatedFare.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 block font-medium">
-                      toll &amp; state tax payable at booths
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={isBooking}
-                    onClick={() => handleBookCab(cab)}
-                    className="mt-3 btn-search-gradient rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-md cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {isBooking ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        <span>Reserving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Book Cab</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+                Register as Cab Operator
+              </Link>
+            </div>
+          )}
         </div>
       </main>
 

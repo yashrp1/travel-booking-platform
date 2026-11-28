@@ -32,7 +32,7 @@ import {
   MessageSquare,
   ThumbsUp,
 } from 'lucide-react';
-import { FEATURED_HOTELS, Hotel } from '@/data/mock-data';
+import type { Hotel } from '@/data/mock-data';
 import { apiClient } from '@/lib/api-client';
 
 function HotelDetailContent() {
@@ -40,10 +40,9 @@ function HotelDetailContent() {
   const router = useRouter();
   const hotelId = params?.id as string;
 
-  const hotel =
-    FEATURED_HOTELS.find((h) => h.id === hotelId) || FEATURED_HOTELS[0];
-
-  const [selectedRoomId, setSelectedRoomId] = useState(hotel.rooms[0]?.id || 'room_1');
+  const [hotel, setHotel] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedRoomId, setSelectedRoomId] = useState('');
   const [selectedMealPlans, setSelectedMealPlans] = useState<Record<string, 'ROOM_ONLY' | 'BREAKFAST' | 'ALL_MEALS'>>({});
   const [activeTab, setActiveTab] = useState<'rooms' | 'comparison' | 'amenities' | 'policies' | 'location' | 'reviews'>('rooms');
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -52,44 +51,36 @@ function HotelDetailContent() {
 
   useEffect(() => {
     let active = true;
+    async function loadHotel() {
+      setIsLoading(true);
+      try {
+        const data = await apiClient.getHotelDetails(hotelId);
+        if (active && data) {
+          setHotel(data);
+          if (data.rooms && data.rooms.length > 0) {
+            setSelectedRoomId(data.rooms[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load hotel detail from database:', err);
+      } finally {
+        if (active) setIsLoading(false);
+      }
+    }
+    if (hotelId) loadHotel();
+    return () => {
+      active = false;
+    };
+  }, [hotelId]);
+
+  useEffect(() => {
+    let active = true;
     async function loadReviews() {
+      if (!hotel?.id) return;
       try {
         const res = await apiClient.getHotelReviews(hotel.id);
         if (active && res && res.reviews && res.reviews.length > 0) {
           setReviewsList(res.reviews);
-        } else if (active) {
-          setReviewsList([
-            {
-              id: 'rev_1',
-              guestName: 'Ananya Deshmukh',
-              rating: 5,
-              stayMonth: 'October 2026',
-              roomType: 'Deluxe Sea Facing Suite',
-              title: 'Unbelievable sunset views & courteous hospitality',
-              comment: 'The private balcony overlooks the Arabian Sea with direct beach access. Breakfast spread was extraordinary and room service prompt.',
-              helpfulCount: 24,
-            },
-            {
-              id: 'rev_2',
-              guestName: 'Karan Mehra',
-              rating: 5,
-              stayMonth: 'September 2026',
-              roomType: 'Heritage Garden Villa',
-              title: 'Tranquil luxury resort ideal for couples',
-              comment: 'Super peaceful environment, spotless infinity pool, and the staff assisted us with late check-out. Will definitely book again through WanderStay.',
-              helpfulCount: 18,
-            },
-            {
-              id: 'rev_3',
-              guestName: 'Pooja Singhania',
-              rating: 4,
-              stayMonth: 'August 2026',
-              roomType: 'Deluxe Sea Facing Suite',
-              title: 'Great family experience with kids pool',
-              comment: 'Loved the landscaped lawns, valet parking and prompt check-in. The Zero-Cancellation protection gave us complete peace of mind.',
-              helpfulCount: 11,
-            },
-          ]);
         }
       } catch {
         // fallback
@@ -99,22 +90,67 @@ function HotelDetailContent() {
     return () => {
       active = false;
     };
-  }, [hotel.id]);
+  }, [hotel?.id]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-[#F4F6F8]">
+        <Header activeTab="hotels" onTabChange={(t) => router.push(t === 'cabs' ? '/cabs/listing' : '/')} />
+        <div className="mx-auto max-w-7xl px-4 py-20 text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#C25E34] border-r-transparent align-[-0.125em]" />
+          <p className="mt-4 text-sm text-slate-500 font-semibold">Loading property details from database...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!hotel) {
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-[#F4F6F8]">
+        <Header activeTab="hotels" onTabChange={(t) => router.push(t === 'cabs' ? '/cabs/listing' : '/')} />
+        <div className="mx-auto max-w-7xl px-4 py-20 text-center">
+          <h2 className="text-2xl font-bold text-slate-900">Property Not Found</h2>
+          <p className="mt-2 text-sm text-slate-500 max-w-md mx-auto">
+            This property could not be found in the database. It may have been removed or is pending approval.
+          </p>
+          <div className="mt-6 flex justify-center gap-4">
+            <Link href="/hotels/listing" className="px-5 py-2.5 rounded-xl bg-[#C25E34] text-white text-sm font-bold">
+              Browse Hotels
+            </Link>
+            <Link href="/partner" className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-bold hover:bg-slate-100">
+              List Your Property
+            </Link>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const hotelRooms = hotel.rooms && hotel.rooms.length > 0 ? hotel.rooms : [
+    {
+      id: 'room_std',
+      name: 'Deluxe Room',
+      sqft: 350,
+      bed: '1 King Bed',
+      price: hotel.pricePerNight || 4500,
+      inclusions: ['Free High-Speed WiFi'],
+      totalInventory: 10,
+      availableRooms: 10,
+    },
+  ];
 
   const selectedRoom =
-    hotel.rooms.find((r) => r.id === selectedRoomId) || hotel.rooms[0];
+    hotelRooms.find((r: any) => r.id === selectedRoomId) || hotelRooms[0];
 
-  const galleryImages = [
-    hotel.imageUrl,
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200',
-    'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200',
-    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
-    'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200',
-  ];
+  const galleryImages = Array.isArray(hotel.images) && hotel.images.length > 0
+    ? hotel.images
+    : [hotel.thumbnailUrl || hotel.imageUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800'];
 
   const handleBookNow = (targetRoomId?: string) => {
     const rId = targetRoomId || selectedRoom.id;
-    const targetRoom = hotel.rooms.find((r) => r.id === rId) || selectedRoom;
+    const targetRoom = hotel.rooms.find((r: any) => r.id === rId) || selectedRoom;
     const plan = selectedMealPlans[rId] || 'BREAKFAST';
     const extra = plan === 'BREAKFAST' ? 1200 : plan === 'ALL_MEALS' ? 2800 : 0;
     const finalPrice = targetRoom.price + extra;
@@ -299,7 +335,7 @@ function HotelDetailContent() {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {hotel.rooms.map((room) => {
+              {hotel.rooms.map((room: any) => {
                 const isSelected = selectedRoomId === room.id;
                 return (
                   <div
@@ -328,7 +364,7 @@ function HotelDetailContent() {
                       </h3>
 
                       <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                        {room.inclusions.map((inc, i) => (
+                        {room.inclusions.map((inc: string, i: number) => (
                           <li key={i} className="flex items-center gap-2">
                             <Check className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                             <span>{inc}</span>
@@ -441,7 +477,7 @@ function HotelDetailContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {hotel.rooms.map((r) => (
+                  {hotel.rooms.map((r: any) => (
                     <tr key={r.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-4 font-bold text-sm text-slate-900">{r.name}</td>
                       <td className="p-4 text-slate-600">{r.sqft} sq.ft</td>
@@ -709,7 +745,7 @@ function HotelDetailContent() {
           </div>
 
           <div className="flex items-center justify-center gap-3 overflow-x-auto pb-2">
-            {galleryImages.map((img, i) => (
+            {galleryImages.map((img: string, i: number) => (
               <button
                 key={i}
                 onClick={() => setGalleryActiveIdx(i)}

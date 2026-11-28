@@ -59,7 +59,7 @@ export default function AdminDashboardPage() {
     fare: 1250,
     availableSeats: 24,
     amenities: 'Live Tracking, Clean Blanket, Charging Point, Free WiFi',
-    registrationNumber: 'DL 01 AB 9920',
+    registrationNumber: '',
   });
   const [allBookings, setAllBookings] = useState<any[]>([]);
   const [coupons, setCoupons] = useState<any[]>([]);

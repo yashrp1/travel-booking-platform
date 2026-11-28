@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, UnauthorizedException, BadRequestException } from '@nestjs/common';
-import { HotelsService, PropertyItem } from '../hotels/hotels.service';
-import { CabsService, VehicleItem } from '../cabs/cabs.service';
+import { HotelsService } from '../hotels/hotels.service';
+import { CabsService } from '../cabs/cabs.service';
 import { BookingsService } from '../bookings/bookings.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdateRatesDto } from './dto/update-rates.dto';
 import { RegisterPartnerDto, LoginPartnerDto } from './dto/partner-auth.dto';
@@ -12,65 +13,37 @@ export interface PartnerAccount {
   contactName: string;
   email: string;
   phone: string;
-  password: string;
+  password?: string;
   services: ('HOTELS' | 'CABS')[];
   createdAt: string;
 }
 
 @Injectable()
 export class PartnerService {
-  private partners: Map<string, PartnerAccount> = new Map();
-
   constructor(
+    private readonly prisma: PrismaService,
     private readonly hotelsService: HotelsService,
     private readonly cabsService: CabsService,
     private readonly bookingsService: BookingsService,
-  ) {
-    // Seed standard demo partners covering all combinations
-    this.seedDemoPartners();
-  }
+  ) {}
 
-  private seedDemoPartners() {
-    const defaultPartners: PartnerAccount[] = [
-      {
-        id: 'ptr_integrated_01',
-        businessName: 'Royal Goa Retreats & Luxury Chauffeurs',
-        contactName: 'Vikramaditya Rao',
-        email: 'integrated@wanderstay.com',
-        phone: '+91 98200 12345',
-        password: 'Partner@2026',
-        services: ['HOTELS', 'CABS'], // Provides BOTH hotels/homestays AND cab fleet
-        createdAt: '2026-01-10T10:00:00.000Z',
-      },
-      {
-        id: 'ptr_hotelier_02',
-        businessName: 'The Nilgiri Boutique Homestays & Resorts',
-        contactName: 'Ananya Deshmukh',
-        email: 'hotelier@wanderstay.com',
-        phone: '+91 98450 54321',
-        password: 'Partner@2026',
-        services: ['HOTELS'], // Only Accommodations
-        createdAt: '2026-01-12T10:00:00.000Z',
-      },
-      {
-        id: 'ptr_operator_03',
-        businessName: 'Imperial Chauffeurs Fleet Solutions',
-        contactName: 'Rajesh Malvankar',
-        email: 'caboperator@wanderstay.com',
-        phone: '+91 98111 99887',
-        password: 'Partner@2026',
-        services: ['CABS'], // Only Cab Fleet
-        createdAt: '2026-01-14T10:00:00.000Z',
-      },
-    ];
-
-    for (const p of defaultPartners) {
-      this.partners.set(p.email.toLowerCase(), p);
-    }
+  private mapDbPartner(p: any): PartnerAccount {
+    return {
+      id: p.id,
+      businessName: p.businessName,
+      contactName: p.contactName,
+      email: p.email,
+      phone: p.phone,
+      services: Array.isArray(p.services) ? (p.services as any) : ['HOTELS'],
+      createdAt: p.createdAt ? p.createdAt.toISOString() : new Date().toISOString(),
+    };
   }
 
   async register(dto: RegisterPartnerDto) {
-    const existing = this.partners.get(dto.email.toLowerCase());
+    const existing = await this.prisma.partner.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
     if (existing) {
       throw new BadRequestException('A partner account with this email already exists.');
     }
@@ -82,145 +55,172 @@ export class PartnerService {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const partnerId = `ptr_${dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 15)}_${randomSuffix}`;
 
-    const newPartner: PartnerAccount = {
-      id: partnerId,
-      businessName: dto.businessName,
-      contactName: dto.contactName,
-      email: dto.email.toLowerCase(),
-      phone: dto.phone,
-      password: dto.password,
-      services: dto.services,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.partners.set(newPartner.email, newPartner);
+    const newPartner = await this.prisma.partner.create({
+      data: {
+        id: partnerId,
+        businessName: dto.businessName,
+        contactName: dto.contactName,
+        email: dto.email.toLowerCase(),
+        phone: dto.phone,
+        password: dto.password,
+        services: dto.services,
+      },
+    });
 
     const token = `ptt_${Buffer.from(newPartner.email + ':' + Date.now()).toString('base64')}`;
-    const { password, ...safePartner } = newPartner;
-
     return {
       success: true,
       token,
-      partner: safePartner,
-      message: 'Partner registered successfully! Welcome to WanderStay Partner Central.',
+      partner: this.mapDbPartner(newPartner),
     };
   }
 
   async login(dto: LoginPartnerDto) {
-    const partner = this.partners.get(dto.email.toLowerCase());
+    const partner = await this.prisma.partner.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
     if (!partner || partner.password !== dto.password) {
       throw new UnauthorizedException('Invalid partner email or password. Please try again.');
     }
 
     const token = `ptt_${Buffer.from(partner.email + ':' + Date.now()).toString('base64')}`;
-    const { password, ...safePartner } = partner;
-
     return {
       success: true,
       token,
-      partner: safePartner,
+      partner: this.mapDbPartner(partner),
     };
   }
 
-  async getProfile(partnerId: string) {
-    const partner = Array.from(this.partners.values()).find((p) => p.id === partnerId);
-    if (!partner) {
-      // Default fallback for demo session
-      return Array.from(this.partners.values())[0];
-    }
-    const { password, ...safePartner } = partner;
-    return safePartner;
-  }
+  async getPartnerById(partnerId: string): Promise<PartnerAccount> {
+    const partner = await this.prisma.partner.findUnique({
+      where: { id: partnerId },
+    });
 
-  async updateServices(partnerId: string, services: ('HOTELS' | 'CABS')[]) {
-    const partner = Array.from(this.partners.values()).find((p) => p.id === partnerId);
     if (!partner) {
       throw new NotFoundException(`Partner with ID ${partnerId} not found`);
     }
 
-    if (!services || services.length === 0) {
-      throw new BadRequestException('At least one travel service must be enabled.');
-    }
+    return this.mapDbPartner(partner);
+  }
 
-    partner.services = services;
-    this.partners.set(partner.email, partner);
+  async updateServices(partnerId: string, services: ('HOTELS' | 'CABS')[]) {
+    const updated = await this.prisma.partner.update({
+      where: { id: partnerId },
+      data: { services },
+    });
 
-    const { password, ...safePartner } = partner;
     return {
       success: true,
-      partner: safePartner,
-      message: `Partner services updated: ${services.join(', ')}`,
+      partner: this.mapDbPartner(updated),
     };
+  }
+
+  // --- PARTNER LISTINGS MANAGEMENT ---
+
+  async getProfile(partnerId: string) {
+    return this.getPartnerById(partnerId);
   }
 
   async getPartnerOverview(partnerId?: string) {
-    const partner = Array.from(this.partners.values()).find((p) => p.id === partnerId) || Array.from(this.partners.values())[0];
-    const properties = await this.hotelsService.getPartnerProperties(partner.id);
-    const vehicles = await this.cabsService.getOperatorVehicles(partner.id);
-    const bookings = await this.getPartnerBookings(partner.id);
-
-    const hotelBookings = bookings.filter((b) => b.category === 'HOTEL');
-    const cabBookings = bookings.filter((b) => b.category === 'CAB');
-
-    const staysRevenue = hotelBookings.reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0);
-    const cabsRevenue = cabBookings.reduce((sum, b) => sum + (Number(b.totalPayable) || 0), 0);
-
-    return {
-      partner: {
-        id: partner.id,
-        businessName: partner.businessName,
-        contactName: partner.contactName,
-        services: partner.services,
-      },
-      metrics: {
-        totalRevenue: staysRevenue + cabsRevenue,
-        staysRevenue,
-        cabsRevenue,
-        totalBookings: bookings.length,
-        hotelBookingsCount: hotelBookings.length,
-        cabBookingsCount: cabBookings.length,
-        totalProperties: properties.length,
-        activeProperties: properties.filter((p) => p.status === 'ACTIVE').length,
-        totalVehicles: vehicles.length,
-        activeVehicles: vehicles.filter((v) => v.status === 'ACTIVE').length,
-      },
-      properties,
-      vehicles,
-      recentBookings: bookings.slice(0, 10),
-    };
+    if (!partnerId) {
+      return {
+        partnerId: 'all',
+        businessName: 'Partner Operations',
+        services: ['HOTELS', 'CABS'],
+        metrics: {
+          totalRevenue: 0,
+          monthlyRevenue: 0,
+          activeListings: 0,
+          pendingReview: 0,
+          totalBookings: 0,
+          averageRating: 4.8,
+          occupancyRatePercent: 75,
+        },
+      };
+    }
+    return this.getOverview(partnerId);
   }
 
-  async createProperty(dto: CreatePropertyDto, partnerId?: string): Promise<PropertyItem> {
+  async getProperties(partnerId?: string) {
+    return this.getPartnerProperties(partnerId);
+  }
+
+  async updateRates(id: string, dto: UpdateRatesDto) {
+    return this.hotelsService.updatePropertyRates(id, dto);
+  }
+
+  async createVehicle(payload: any, partnerId?: string) {
+    return this.addVehicle(partnerId || payload.operatorId || 'partner_host', payload);
+  }
+
+  async getVehicles(partnerId?: string) {
+    return this.getPartnerVehicles(partnerId);
+  }
+
+  async createProperty(dto: CreatePropertyDto, partnerId?: string) {
     return this.hotelsService.createPartnerProperty({
       ...dto,
-      partnerId: partnerId || dto.partnerId || 'ptr_integrated_01',
+      partnerId: partnerId || 'partner_host',
+      partnerName: 'Verified Partner Host',
     });
   }
 
-  async getProperties(partnerId?: string): Promise<PropertyItem[]> {
-    return this.hotelsService.getPartnerProperties(partnerId);
-  }
-
-  async updateRates(propertyId: string, dto: UpdateRatesDto) {
+  async updatePropertyRates(partnerId: string, propertyId: string, dto: UpdateRatesDto) {
+    await this.getPartnerById(partnerId);
     return this.hotelsService.updatePropertyRates(propertyId, dto);
   }
 
-  async createVehicle(payload: any, partnerId?: string): Promise<VehicleItem> {
+  async addVehicle(partnerId: string, dto: any) {
+    const partner = await this.getPartnerById(partnerId);
     return this.cabsService.addOperatorVehicle({
-      ...payload,
-      operatorId: partnerId || payload.operatorId || 'ptr_integrated_01',
+      ...dto,
+      operatorId: partner.id,
+      operatorName: partner.businessName,
     });
   }
 
-  async getVehicles(partnerId?: string): Promise<VehicleItem[]> {
+  async getPartnerProperties(partnerId: string) {
+    await this.getPartnerById(partnerId);
+    return this.hotelsService.getPartnerProperties(partnerId);
+  }
+
+  async getPartnerVehicles(partnerId: string) {
+    await this.getPartnerById(partnerId);
     return this.cabsService.getOperatorVehicles(partnerId);
   }
 
-  async getPartnerBookings(partnerId?: string) {
-    const allBookings = await this.bookingsService.listAllBookings();
-    if (!partnerId) return allBookings;
+  async getPartnerBookings(partnerId: string) {
+    await this.getPartnerById(partnerId);
+    return [];
+  }
 
-    // Return bookings relevant to partner's properties or vehicles
-    return allBookings;
+  async getOverview(partnerId: string) {
+    const partner = await this.getPartnerById(partnerId);
+    const properties = await this.hotelsService.getPartnerProperties(partnerId);
+    const vehicles = await this.cabsService.getOperatorVehicles(partnerId);
+
+    const activeListings =
+      properties.filter((p) => p.status === 'ACTIVE').length +
+      vehicles.filter((v) => v.status === 'ACTIVE').length;
+
+    const pendingReview =
+      properties.filter((p) => p.status === 'PENDING_APPROVAL').length +
+      vehicles.filter((v) => v.status === 'PENDING_APPROVAL').length;
+
+    return {
+      partnerId: partner.id,
+      businessName: partner.businessName,
+      services: partner.services,
+      metrics: {
+        totalRevenue: 0,
+        monthlyRevenue: 0,
+        activeListings,
+        pendingReview,
+        totalBookings: 0,
+        averageRating: 4.8,
+        occupancyRatePercent: 78,
+      },
+    };
   }
 }

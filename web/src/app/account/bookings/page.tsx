@@ -43,48 +43,10 @@ export default function MyBookingsPage() {
       if (list && list.length > 0) {
         setBookings(list);
       } else {
-        setBookings([
-          {
-            bookingReference: 'MMT-HTL-202611-9872',
-            category: 'HOTEL',
-            status: 'CONFIRMED',
-            hotelName: 'Taj Fort Aguada Resort & Spa',
-            city: 'Goa',
-            checkInDate: '2026-11-15',
-            checkOutDate: '2026-11-18',
-            leadGuestName: 'Mr Rahul Sharma',
-            totalPayable: 15110,
-            hasZeroCancellation: true,
-            createdAt: '2026-11-01T10:30:00Z',
-          },
-          {
-            bookingReference: 'MMT-CAB-202611-4412',
-            category: 'CAB',
-            status: 'CONFIRMED',
-            cabName: 'Sedan – Dzire or similar',
-            sourceCity: 'New Delhi',
-            destinationCity: 'Agra',
-            pickupDate: '2026-11-12',
-            pickupTime: '07:00 AM',
-            totalPayable: 3420,
-            createdAt: '2026-11-02T08:15:00Z',
-          },
-          {
-            bookingReference: 'MMT-HTL-202610-1190',
-            category: 'HOTEL',
-            status: 'COMPLETED',
-            hotelName: 'The Leela Palace Bengaluru',
-            city: 'Bengaluru',
-            checkInDate: '2026-10-12',
-            checkOutDate: '2026-10-14',
-            leadGuestName: 'Mr Rahul Sharma',
-            totalPayable: 22400,
-            createdAt: '2026-10-05T12:00:00Z',
-          },
-        ]);
+        setBookings([]);
       }
     } catch {
-      // Fallback
+      setBookings([]);
     } finally {
       setIsLoading(false);
     }
@@ -140,12 +102,12 @@ export default function MyBookingsPage() {
           state: 'Haryana (07)',
         },
         billedTo: {
-          customerName: b?.leadGuestName || 'Mr Rahul Sharma',
-          customerEmail: 'rahul.sharma@example.com',
-          customerPhone: '+91 98765 43210',
-          companyName: 'Tata Consultancy Services Ltd',
-          gstin: '27AAACT2727Q1ZW',
-          companyAddress: 'Bandra Kurla Complex, Mumbai, Maharashtra 400051',
+          customerName: b?.leadGuestName || b?.passengerName || 'Valued Guest',
+          customerEmail: b?.leadGuestEmail || b?.passengerEmail || '',
+          customerPhone: b?.leadGuestPhone || b?.passengerPhone || '',
+          companyName: b?.gstinDetails?.companyName || '',
+          gstin: b?.gstinDetails?.gstin || '',
+          companyAddress: b?.gstinDetails?.companyAddress || '',
         },
         lineItems: [
           {

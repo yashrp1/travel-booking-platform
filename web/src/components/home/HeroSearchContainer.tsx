@@ -16,7 +16,7 @@ import {
   CheckCircle,
   History,
 } from 'lucide-react';
-import { Destination, POPULAR_DESTINATIONS } from '@/data/mock-data';
+import { Destination } from '@/data/mock-data';
 import CityPickerModal from '@/components/home/CityPickerModal';
 import DatePickerModal from '@/components/home/DatePickerModal';
 import GuestsModal from '@/components/home/GuestsModal';

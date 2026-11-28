@@ -40,14 +40,7 @@ export const apiClient = {
       if (!res.ok) throw new Error('Failed to fetch destinations');
       return await res.json();
     } catch {
-      // Fallback
-      return [
-        { id: 'loc_goa', name: 'Goa', state: 'Goa', type: 'CITY', hotelCount: 1420 },
-        { id: 'loc_jaipur', name: 'Jaipur', state: 'Rajasthan', type: 'CITY', hotelCount: 740 },
-        { id: 'loc_mumbai', name: 'Mumbai', state: 'Maharashtra', type: 'CITY', hotelCount: 980 },
-        { id: 'loc_delhi', name: 'New Delhi', state: 'Delhi', type: 'CITY', hotelCount: 1850 },
-        { id: 'loc_bengaluru', name: 'Bengaluru', state: 'Karnataka', type: 'CITY', hotelCount: 1120 },
-      ];
+      return [];
     }
   },
 
@@ -109,30 +102,16 @@ export const apiClient = {
     tollTaxes: number;
     couponCode?: string;
   }) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/bookings/cabs/initiate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to initiate cab booking');
-      return await res.json();
-    } catch {
-      const ref = `MMT-CAB-${Math.floor(100000 + Math.random() * 900000)}`;
-      return {
-        bookingReference: ref,
-        category: 'CAB',
-        status: 'CONFIRMED',
-        totalPayable: payload.baseFare + payload.tollTaxes,
-        assignedDriver: {
-          name: 'Suresh Kumar',
-          phone: '+91 98111 22334',
-          vehicleNumber: 'DL 01 TA 4921',
-          vehicleModel: 'Maruti Suzuki Dzire',
-          rating: 4.9,
-        },
-      };
+    const res = await fetch(`${API_BASE_URL}/bookings/cabs/initiate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to initiate cab booking');
     }
+    return await res.json();
   },
 
   async listBookings() {
@@ -184,22 +163,16 @@ export const apiClient = {
     };
     walletCoinsRedeemed?: number;
   }) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/bookings/hotels/initiate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to initiate booking');
-      return await res.json();
-    } catch {
-      const ref = `MMT-HTL-${Math.floor(100000 + Math.random() * 900000)}`;
-      return {
-        bookingReference: ref,
-        status: 'PAYMENT_PENDING',
-        totalPayable: payload.baseAmount,
-      };
+    const res = await fetch(`${API_BASE_URL}/bookings/hotels/initiate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to initiate booking');
     }
+    return await res.json();
   },
 
   async verifyPayment(payload: {
@@ -271,17 +244,16 @@ export const apiClient = {
   },
 
   async submitReview(payload: any) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/reviews/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to submit review');
-      return await res.json();
-    } catch {
-      return { success: true, message: 'Review recorded locally' };
+    const res = await fetch(`${API_BASE_URL}/reviews/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Failed to submit review');
     }
+    return await res.json();
   },
 
   async getHotelReviews(hotelId: string) {
@@ -290,7 +262,7 @@ export const apiClient = {
       if (!res.ok) throw new Error('Failed to fetch reviews');
       return await res.json();
     } catch {
-      return { totalReviews: 0, averageRating: 4.8, reviews: [] };
+      return { totalReviews: 0, averageRating: 0, reviews: [] };
     }
   },
 

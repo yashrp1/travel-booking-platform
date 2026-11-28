@@ -4,8 +4,7 @@ datasource db {
 }
 
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 enum UserRole {
@@ -71,6 +70,8 @@ model Hotel {
   city                      String
   state                     String
   address                   String
+  area                      String?   @map("area")
+  distanceFromBeach         String?   @map("distance_from_beach")
   latitude                  Float?
   longitude                 Float?
   checkInTime               String    @default("14:00") @map("check_in_time")
@@ -78,8 +79,15 @@ model Hotel {
   thumbnailUrl              String    @map("thumbnail_url")
   images                    Json      @default("[]")
   rules                     Json      @default("[]")
+  amenities                 Json      @default("[]")
+  pricePerNight             Decimal   @default(4500) @map("price_per_night") @db.Decimal(10, 2)
+  originalPrice             Decimal?  @map("original_price") @db.Decimal(10, 2)
+  taxesAndFees              Decimal?  @map("taxes_and_fees") @db.Decimal(10, 2)
   freeCancellationAvailable Boolean   @default(true) @map("free_cancellation_available")
   breakfastAvailable        Boolean   @default(true) @map("breakfast_available")
+  partnerId                 String?   @map("partner_id")
+  partnerName               String?   @map("partner_name")
+  status                    String    @default("ACTIVE") @map("status")
   isActive                  Boolean   @default(true) @map("is_active")
   createdAt                 DateTime  @default(now()) @map("created_at")
   updatedAt                 DateTime  @updatedAt @map("updated_at")
@@ -105,6 +113,9 @@ model RoomType {
   bedType           String          @default("King Bed") @map("bed_type")
   amenities         Json            @default("[]")
   images            Json            @default("[]")
+  inclusions        Json            @default("[]")
+  totalInventory    Int             @default(10) @map("total_inventory")
+  availableRooms    Int             @default(10) @map("available_rooms")
   createdAt         DateTime        @default(now()) @map("created_at")
 
   hotel             Hotel           @relation(fields: [hotelId], references: [id], onDelete: Cascade)
@@ -176,16 +187,71 @@ model CabPricingRule {
 }
 
 model CabVehicle {
-  id                 String      @id @default(uuid())
-  categoryId         String      @map("category_id")
-  registrationNumber String      @unique @map("registration_number")
-  modelName          String      @map("model_name")
-  color              String      @default("White")
-  isActive           Boolean     @default(true) @map("is_active")
+  id                 String       @id @default(uuid())
+  categoryId         String?      @map("category_id")
+  categoryName       String       @default("SEDAN") @map("category_name")
+  name               String       @default("Sedan")
+  modelExamples      String       @default("Dzire, Etios or similar") @map("model_examples")
+  registrationNumber String       @unique @map("registration_number")
+  seatCapacity       Int          @default(4) @map("seat_capacity")
+  luggageCapacity    Int          @default(2) @map("luggage_capacity")
+  ac                 Boolean      @default(true)
+  imageUrl           String?      @map("image_url")
+  baseFarePerKm      Decimal      @default(12.0) @map("base_fare_per_km") @db.Decimal(10, 2)
+  extraKmRate        Decimal      @default(12.0) @map("extra_km_rate") @db.Decimal(10, 2)
+  driverAllowance    Decimal      @default(300.0) @map("driver_allowance") @db.Decimal(10, 2)
+  driverName         String?      @map("driver_name")
+  driverPhone        String?      @map("driver_phone")
+  operatorId         String?      @map("operator_id")
+  operatorName       String?      @map("operator_name")
+  status             String       @default("ACTIVE") @map("status")
+  isActive           Boolean      @default(true) @map("is_active")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
 
-  category           CabCategory @relation(fields: [categoryId], references: [id])
+  category           CabCategory? @relation(fields: [categoryId], references: [id])
 
   @@map("cab_vehicles")
+}
+
+model Partner {
+  id           String    @id @default(uuid())
+  businessName String    @map("business_name")
+  contactName  String    @map("contact_name")
+  email        String    @unique
+  phone        String
+  password     String
+  services     Json      @default("[\"HOTELS\"]")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("partners")
+}
+
+model Bus {
+  id                 String       @id @default(uuid())
+  operatorName       String       @map("operator_name")
+  busType            String       @map("bus_type")
+  fromCity           String       @map("from_city")
+  toCity             String       @map("to_city")
+  departureTime      String       @map("departure_time")
+  arrivalTime        String       @map("arrival_time")
+  duration           String
+  fare               Decimal      @db.Decimal(10, 2)
+  originalFare       Decimal?     @map("original_fare") @db.Decimal(10, 2)
+  rating             Float        @default(4.5)
+  reviewCount        Int          @default(0) @map("review_count")
+  totalSeats         Int          @default(40) @map("total_seats")
+  availableSeats     Int          @default(40) @map("available_seats")
+  amenities          Json         @default("[]")
+  boardingPoints     Json         @default("[]") @map("boarding_points")
+  droppingPoints     Json         @default("[]") @map("dropping_points")
+  registrationNumber String?      @map("registration_number")
+  status             String       @default("ACTIVE")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  @@map("buses")
 }
 
 model Booking {

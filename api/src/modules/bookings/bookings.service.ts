@@ -6,64 +6,7 @@ import { RedisService } from '../../common/redis/redis.service';
 export class BookingsService {
   private readonly bookings = new Map<string, any>();
 
-  constructor(private readonly redisService: RedisService) {
-    // Seed initial active bookings
-    this.bookings.set('MMT-HTL-202611-9872', {
-      bookingReference: 'MMT-HTL-202611-9872',
-      category: 'HOTEL',
-      status: 'CONFIRMED',
-      hotelName: 'Taj Fort Aguada Resort & Spa',
-      city: 'Goa',
-      checkInDate: '2026-11-15',
-      checkOutDate: '2026-11-18',
-      leadGuestName: 'Mr Rahul Sharma',
-      totalPayable: 15110,
-      createdAt: new Date().toISOString(),
-    });
-
-    this.bookings.set('MMT-CAB-202611-4412', {
-      bookingReference: 'MMT-CAB-202611-4412',
-      category: 'CAB',
-      status: 'CONFIRMED',
-      cabName: 'Sedan – Dzire or similar',
-      fromCity: 'New Delhi',
-      toCity: 'Agra',
-      departureDate: '2026-11-12',
-      departureTime: '07:00 AM',
-      totalPayable: 3420,
-      createdAt: new Date().toISOString(),
-    });
-
-    this.bookings.set('MMT-HTL-202611-3180', {
-      bookingReference: 'MMT-HTL-202611-3180',
-      category: 'HOTEL',
-      status: 'CONFIRMED',
-      hotelName: 'Mövenpick Hotel Jakarta',
-      city: 'Jakarta',
-      checkInDate: '2026-11-28',
-      checkOutDate: '2026-12-01',
-      leadGuestName: 'Mr Rahul Sharma',
-      leadGuestEmail: 'rahul.sharma@example.com',
-      leadGuestPhone: '+919876543210',
-      totalPayable: 18500,
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    });
-
-    this.bookings.set('MMT-HTL-202610-8452', {
-      bookingReference: 'MMT-HTL-202610-8452',
-      category: 'HOTEL',
-      status: 'COMPLETED',
-      hotelName: 'Grand Hyatt Hotel & Residences',
-      city: 'Mumbai',
-      checkInDate: '2026-10-10',
-      checkOutDate: '2026-10-13',
-      leadGuestName: 'Mr Rahul Sharma',
-      leadGuestEmail: 'rahul.sharma@example.com',
-      leadGuestPhone: '+919876543210',
-      totalPayable: 9800,
-      createdAt: new Date(Date.now() - 86400000 * 40).toISOString(),
-    });
-  }
+  constructor(private readonly redisService: RedisService) {}
 
   async initiateHotelBooking(dto: InitiateHotelBookingDto) {
     // Acquire distributed lock to prevent double-booking race condition during concurrent checkout

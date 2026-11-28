@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, X, Building2, Flame, Loader2 } from 'lucide-react';
-import { POPULAR_DESTINATIONS, Destination } from '@/data/mock-data';
+import { Destination } from '@/data/mock-data';
 import { apiClient, DestinationResponse } from '@/lib/api-client';
 
 interface CityPickerModalProps {
@@ -23,62 +23,43 @@ export default function CityPickerModal({
   const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
-    if (!search.trim()) {
-      setLiveResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
+    let isMounted = true;
+    async function fetchDestinations() {
       setIsSearching(true);
       try {
-        const res = await apiClient.getDestinations(search);
-        // Map backend DestinationResponse to Destination
-        const mapped: Destination[] = res.map((d: DestinationResponse) => {
-          const matchedPopular = POPULAR_DESTINATIONS.find(
-            (p) => p.name.toLowerCase() === d.name.toLowerCase()
-          );
-          return {
+        const res = await apiClient.getDestinations(search.trim());
+        if (isMounted && Array.isArray(res)) {
+          const mapped: Destination[] = res.map((d: DestinationResponse) => ({
             id: d.id,
             name: d.name,
-            state: d.state,
+            state: d.state || 'India',
             country: 'India',
-            tag: matchedPopular?.tag || d.type || 'Prime Hub',
-            hotelCount: d.hotelCount || 250,
-            popularFor: matchedPopular?.popularFor || `${d.name} top attractions and stays`,
-          };
-        });
-        setLiveResults(mapped);
+            tag: d.type || 'Stay Location',
+            hotelCount: d.hotelCount || 1,
+            popularFor: `${d.name} verified hotels & stays`,
+          }));
+          setLiveResults(mapped);
+        }
       } catch (err) {
-        console.error('Failed to fetch destinations', err);
+        console.error('Failed to fetch destinations from database', err);
       } finally {
-        setIsSearching(false);
+        if (isMounted) setIsSearching(false);
       }
-    }, 200);
+    }
 
-    return () => clearTimeout(timer);
-  }, [search]);
+    if (isOpen) {
+      const timer = setTimeout(fetchDestinations, search.trim() ? 250 : 0);
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+      };
+    }
+  }, [search, isOpen]);
 
   if (!isOpen) return null;
 
-  // Combine popular filtering with live query results if available
-  const filteredPopular = POPULAR_DESTINATIONS.filter(
-    (d) =>
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      d.state.toLowerCase().includes(search.toLowerCase()) ||
-      d.popularFor.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // De-duplicate results
-  const displayDestinations = search.trim()
-    ? [
-        ...liveResults,
-        ...filteredPopular.filter((p) => !liveResults.some((l) => l.name.toLowerCase() === p.name.toLowerCase())),
-      ]
-    : POPULAR_DESTINATIONS;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fade-in">
       <div className="relative w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl border border-stone-900/20">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-stone-200 p-4 bg-[#18181B] text-white">
@@ -91,7 +72,7 @@ export default function CityPickerModal({
                 Select Destination, City or Landmark
               </h3>
               <p className="text-[11px] text-stone-300">
-                10,000+ verified hotels, boutique estates &amp; homestays
+                Live database destinations from verified partner properties
               </p>
             </div>
           </div>
@@ -127,19 +108,43 @@ export default function CityPickerModal({
           <div className="flex items-center justify-between px-2 py-1 text-xs font-bold uppercase tracking-wider text-stone-900">
             <div className="flex items-center gap-1.5">
               <Flame className="h-3.5 w-3.5 text-[#C25E34]" />
-              <span>{search.trim() ? 'Search Results' : 'Popular Destinations in India'}</span>
+              <span>{search.trim() ? 'Search Results' : 'Active Destinations'}</span>
             </div>
             <span className="text-[10px] text-stone-500 font-semibold">
-              {displayDestinations.length} Available
+              {liveResults.length} Available
             </span>
           </div>
 
-          {displayDestinations.length === 0 ? (
+          {liveResults.length === 0 ? (
             <div className="p-8 text-center text-sm text-stone-500">
-              No matching destinations found for &quot;{search}&quot;. Try searching for &quot;Goa&quot;, &quot;Jaipur&quot;, or &quot;Delhi&quot;.
+              {search.trim() ? (
+                <div>
+                  <p>No listed stays currently in database for &quot;{search}&quot;.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelect({
+                        id: `loc_custom_${Date.now()}`,
+                        name: search.trim(),
+                        state: 'India',
+                        country: 'India',
+                        tag: 'Search Area',
+                        hotelCount: 0,
+                        popularFor: 'Travel destination',
+                      });
+                      onClose();
+                    }}
+                    className="mt-3 px-4 py-2 rounded-xl bg-[#C25E34] text-white text-xs font-bold hover:bg-[#A84F2A]"
+                  >
+                    Select &quot;{search.trim()}&quot; anyway
+                  </button>
+                </div>
+              ) : (
+                <p>No destinations found in database. Partner properties will appear here once registered.</p>
+              )}
             </div>
           ) : (
-            displayDestinations.map((dest) => {
+            liveResults.map((dest) => {
               const isSelected = dest.name.toLowerCase() === currentCity.toLowerCase();
               return (
                 <button
@@ -178,7 +183,7 @@ export default function CityPickerModal({
                   </div>
                   <div className="text-right">
                     <span className={`text-xs font-bold ${isSelected ? 'text-[#C25E34]' : 'text-stone-900'}`}>
-                      {dest.hotelCount}+
+                      {dest.hotelCount}
                     </span>
                     <span className={`block text-[10px] ${isSelected ? 'text-stone-400' : 'text-stone-400'}`}>
                       Stays

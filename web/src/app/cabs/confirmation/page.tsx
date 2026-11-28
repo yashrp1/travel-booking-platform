@@ -61,7 +61,7 @@ function CabConfirmationContent() {
   };
 
   const handleCallDriver = () => {
-    alert('Connecting to Chauffeur Vikram Singh via secure masked call line (+91 98765 43210)...');
+    alert('Connecting to your assigned chauffeur via WanderStay secure masked line...');
   };
 
   return (
@@ -243,17 +243,17 @@ function CabConfirmationContent() {
               <div className="bg-[#082F2C]/90 rounded-xl p-4 border border-[#0F443F] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-[#C25E34] text-[#18181B] flex items-center justify-center font-black text-base shadow-sm">
-                    VS
+                    WS
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <strong className="text-sm font-bold text-white">Vikram Singh</strong>
+                      <strong className="text-sm font-bold text-white">Chauffeur Assigned</strong>
                       <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[10px] font-black px-1.5 py-0.2 rounded">
-                        ★ 4.9 (3,420 trips)
+                        ★ Verified Professional
                       </span>
                     </div>
                     <p className="text-xs text-stone-200/70 mt-0.5">
-                      White {category} • Reg: <strong className="text-white font-mono">DL 01 AB 8899</strong>
+                      {category} • Chauffeur details dispatched via SMS prior to pickup
                     </p>
                   </div>
                 </div>
@@ -264,17 +264,8 @@ function CabConfirmationContent() {
                     className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-[#C25E34] hover:bg-[#A84F2A] text-[#18181B] font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-md"
                   >
                     <Phone className="h-3.5 w-3.5" />
-                    <span>Call Driver</span>
+                    <span>Call Chauffeur</span>
                   </button>
-                  <a
-                    href="https://wa.me/919876543210"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-white/20"
-                  >
-                    <MessageSquare className="h-3.5 w-3.5 text-emerald-400" />
-                    <span>WhatsApp</span>
-                  </a>
                 </div>
               </div>
             </div>
